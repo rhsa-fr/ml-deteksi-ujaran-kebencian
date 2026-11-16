@@ -240,9 +240,13 @@ def main() -> None:
     print("Class weights:", {label: round(float(w), 4) for label, w in zip(LABELS, weights)})
 
     def fresh_model():
-        return AutoModelForSequenceClassification.from_pretrained(
+        model = AutoModelForSequenceClassification.from_pretrained(
             MODEL_NAME, num_labels=len(LABELS)
         ).to(device)
+        # Checkpoint IndoBERT membawa id2label 5 kelas; timpa dengan label kita.
+        model.config.id2label = {i: label for i, label in enumerate(LABELS)}
+        model.config.label2id = {label: i for i, label in enumerate(LABELS)}
+        return model
 
     # ---- Fase 1: pilih epoch terbaik di validation -------------------------
     print("\n=== Fase 1: latih di train, pantau validation ===")
