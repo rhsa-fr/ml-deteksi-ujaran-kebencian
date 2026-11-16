@@ -2,6 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "app/main.py": {
+      "includeFiles": "{app/**,src/**,models/best_model.joblib,models/preprocess_config.json,data/raw/**,results/metrics.json,public/**}",
       "excludeFiles": "{data/processed/**,models/pipeline_*.joblib,reports/**,scripts/**,notebooks/**,**/__pycache__/**,**/*.pyc}"
     }
   }
