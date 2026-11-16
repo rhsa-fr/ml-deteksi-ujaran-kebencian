@@ -102,12 +102,12 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def compute_class_weights(series, device, mode: str) -> torch.Tensor | None:
+def compute_class_weights(series, device, mode: str, labels) -> torch.Tensor | None:
     """Bobot kelas untuk CrossEntropyLoss."""
     if mode == "none":
         return None
     total = len(series)
-    raw = [total / (len(LABELS) * series[label]) for label in LABELS]
+    raw = [total / (len(labels) * series[label]) for label in labels]
     if mode == "sqrt":
         raw = [math.sqrt(value) for value in raw]
     return torch.tensor(raw, dtype=torch.float32, device=device)
@@ -311,6 +311,10 @@ def main() -> None:
     frame = load_dataset(data_path)
     print(f"Total data: {len(frame):,}")
 
+    # Label diambil dari data, jadi skrip ini bisa 2 kelas maupun 3 kelas.
+    LABELS = sorted(frame["label"].unique().tolist())
+    print(f"Kelas ({len(LABELS)}): {LABELS}")
+
     X = frame["text_final"]
     y = frame["label"]
 
@@ -339,7 +343,7 @@ def main() -> None:
 
     # Bobot kelas: `sqrt` mencegah model menghafal kelas minoritas yang
     # jumlahnya hanya ratusan.
-    weights = compute_class_weights(y_train.value_counts(), device, args.weighting)
+    weights = compute_class_weights(y_train.value_counts(), device, args.weighting, LABELS)
     print("Weighting:", args.weighting)
     if weights is not None:
         print("Class weights:", {label: round(float(w), 4) for label, w in zip(LABELS, weights)})
@@ -388,7 +392,7 @@ def main() -> None:
     full_ds = TextDataset(X_full.tolist(), [to_ids[v] for v in y_full], tokenizer, MAX_LEN)
     full_loader = DataLoader(full_ds, batch_size=BATCH_SIZE, shuffle=True, collate_fn=collator)
 
-    weights_full = compute_class_weights(y_full.value_counts(), device, args.weighting)
+    weights_full = compute_class_weights(y_full.value_counts(), device, args.weighting, LABELS)
     final_model = fresh_model()
     run_epochs(
         final_model,
