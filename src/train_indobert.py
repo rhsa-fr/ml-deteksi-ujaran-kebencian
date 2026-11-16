@@ -1,0 +1,362 @@
+"""Fine-tuning IndoBERT untuk klasifikasi 3 kelas ujaran kebencian.
+
+Desain eksperimen sengaja dibuat identik dengan `src/train.py` agar
+perbandingan SVM vs IndoBERT bersifat apple-to-apple:
+
+1. Sumber data dan fungsi pembersihan sama (`data/processed/dataset_clean.csv`).
+2. Split sama: 80% train, 10% validation, 10% test, `random_state=42`.
+3. Validation hanya dipakai untuk memilih jumlah epoch terbaik.
+4. Setelah epoch terbaik diketahui, model dilatih ulang pada train+val
+   (persis seperti SVM) lalu diuji SEKALI pada test.
+
+Jalankan di GPU (Colab T4):
+
+    pip install -q transformers
+    python src/train_indobert.py
+"""
+
+from __future__ import annotations
+
+import json
+import random
+import time
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import torch
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+)
+from sklearn.model_selection import train_test_split
+from torch.utils.data import DataLoader, Dataset
+from transformers import (
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
+    DataCollatorWithPadding,
+    get_linear_schedule_with_warmup,
+)
+
+ROOT = Path(__file__).resolve().parents[1]
+DATA_PATH = ROOT / "data" / "processed" / "dataset_clean.csv"
+METRICS_PATH = ROOT / "results" / "metrics.json"
+INDOBERT_METRICS_PATH = ROOT / "results" / "indobert_metrics.json"
+REPORT_PATH = ROOT / "results" / "indobert_classification_report.txt"
+MODEL_DIR = ROOT / "models" / "indobert"
+
+RANDOM_STATE = 42
+MODEL_NAME = "indobenchmark/indobert-base-p1"
+LABELS = ["Abusive", "Hate Speech", "Normal"]
+MAX_LEN = 96
+BATCH_SIZE = 32
+LEARNING_RATE = 2e-5
+EPOCHS = 4
+WEIGHT_DECAY = 0.01
+WARMUP_RATIO = 0.1
+MAX_GRAD_NORM = 1.0
+
+
+def set_seed(seed: int = RANDOM_STATE) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+
+def pick_device() -> torch.device:
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")
+
+
+def load_dataset() -> pd.DataFrame:
+    """Identik dengan `src/train.py` supaya split reproducible."""
+    frame = pd.read_csv(DATA_PATH)
+    frame = frame.dropna(subset=["text_final", "label"])
+    frame = frame[frame["text_final"].str.strip().str.len() > 0]
+    return frame.reset_index(drop=True)
+
+
+class TextDataset(Dataset):
+    def __init__(self, texts: list[str], labels: list[int], tokenizer, max_len: int):
+        self.encodings = tokenizer(
+            texts,
+            truncation=True,
+            max_length=max_len,
+            padding=False,
+        )
+        self.labels = labels
+
+    def __len__(self) -> int:
+        return len(self.labels)
+
+    def __getitem__(self, index: int) -> dict:
+        item = {key: value[index] for key, value in self.encodings.items()}
+        item["labels"] = self.labels[index]
+        return item
+
+
+def evaluate(model, loader, device) -> tuple[float, np.ndarray, np.ndarray]:
+    model.eval()
+    losses, preds, truths = [], [], []
+    criterion = torch.nn.CrossEntropyLoss()
+    with torch.no_grad():
+        for batch in loader:
+            labels = batch["labels"].to(device)
+            inputs = {k: v.to(device) for k, v in batch.items() if k != "labels"}
+            logits = model(**inputs).logits
+            losses.append(float(criterion(logits, labels)))
+            preds.extend(logits.argmax(dim=-1).cpu().numpy().tolist())
+            truths.extend(labels.cpu().numpy().tolist())
+    macro_f1 = f1_score(truths, preds, average="macro")
+    return float(np.mean(losses)), macro_f1, np.array(truths), np.array(preds)
+
+
+def run_epochs(
+    model,
+    train_loader,
+    val_loader,
+    device,
+    epochs: int,
+    lr: float,
+    class_weights: torch.Tensor | None,
+    tag: str,
+) -> tuple[int, dict[str, float], float]:
+    """Latih `epochs` epoch, kembalikan epoch terbaik menurut val macro-F1."""
+    optimizer = torch.optim.AdamW(
+        model.parameters(), lr=lr, weight_decay=WEIGHT_DECAY
+    )
+    total_steps = max(1, len(train_loader) * epochs)
+    scheduler = get_linear_schedule_with_warmup(
+        optimizer,
+        num_warmup_steps=int(total_steps * WARMUP_RATIO),
+        num_training_steps=total_steps,
+    )
+    criterion = torch.nn.CrossEntropyLoss(weight=class_weights)
+    use_amp = device.type == "cuda"
+    scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
+
+    best_epoch, best_f1, best_state, history = 1, -1.0, None, {}
+    for epoch in range(1, epochs + 1):
+        model.train()
+        started = time.time()
+        running = 0.0
+        for step, batch in enumerate(train_loader, start=1):
+            labels = batch["labels"].to(device)
+            inputs = {k: v.to(device) for k, v in batch.items() if k != "labels"}
+            optimizer.zero_grad(set_to_none=True)
+            with torch.amp.autocast("cuda", enabled=use_amp):
+                logits = model(**inputs).logits
+                loss = criterion(logits, labels)
+            if use_amp:
+                scaler.scale(loss).backward()
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), MAX_GRAD_NORM)
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), MAX_GRAD_NORM)
+                optimizer.step()
+            scheduler.step()
+            running += float(loss)
+            if step % 100 == 0:
+                print(f"  [{tag}] epoch {epoch} step {step}/{len(train_loader)} "
+                      f"loss={running / step:.4f}", flush=True)
+
+        eval_loader = val_loader if val_loader is not None else train_loader
+        val_loss, val_f1, _, _ = evaluate(model, eval_loader, device)
+        elapsed = time.time() - started
+        history[f"epoch_{epoch}"] = {
+            "train_loss": round(running / len(train_loader), 4),
+            "val_loss": round(val_loss, 4),
+            "val_macro_f1": round(val_f1, 4),
+            "seconds": round(elapsed, 1),
+        }
+        print(
+            f"  [{tag}] epoch {epoch}: train_loss={running / len(train_loader):.4f} "
+            f"val_loss={val_loss:.4f} val_macro_f1={val_f1:.4f} ({elapsed:.0f}s)",
+            flush=True,
+        )
+        if val_f1 > best_f1:
+            best_f1 = val_f1
+            best_epoch = epoch
+            best_state = {
+                k: v.detach().cpu().clone() for k, v in model.state_dict().items()
+            }
+    if best_state is not None:
+        model.load_state_dict(best_state)
+    return best_epoch, history, best_f1
+
+
+def main() -> None:
+    set_seed()
+    device = pick_device()
+    print(f"Device: {device} ({torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'})")
+    print(f"Model : {MODEL_NAME}")
+
+    torch.set_num_threads(max(1, torch.get_num_threads()))
+    frame = load_dataset()
+    print(f"Total data: {len(frame):,}")
+
+    X = frame["text_final"]
+    y = frame["label"]
+
+    X_train, X_temp, y_train, y_temp = train_test_split(
+        X, y, test_size=0.2, stratify=y, random_state=RANDOM_STATE
+    )
+    X_val, X_test, y_val, y_test = train_test_split(
+        X_temp, y_temp, test_size=0.5, stratify=y_temp, random_state=RANDOM_STATE
+    )
+    print(f"Split: train={len(X_train):,} val={len(X_val):,} test={len(X_test):,}")
+    for name, series in (("train", y_train), ("val", y_val), ("test", y_test)):
+        counts = series.value_counts().to_dict()
+        print(f"  {name}: " + ", ".join(f"{k}={v}" for k, v in counts.items()))
+
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    to_ids = {label: index for index, label in enumerate(LABELS)}
+
+    train_ds = TextDataset(X_train.tolist(), [to_ids[v] for v in y_train], tokenizer, MAX_LEN)
+    val_ds = TextDataset(X_val.tolist(), [to_ids[v] for v in y_val], tokenizer, MAX_LEN)
+    test_ds = TextDataset(X_test.tolist(), [to_ids[v] for v in y_test], tokenizer, MAX_LEN)
+    collator = DataCollatorWithPadding(tokenizer=tokenizer)
+
+    train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, collate_fn=collator)
+    val_loader = DataLoader(val_ds, batch_size=64, shuffle=False, collate_fn=collator)
+    test_loader = DataLoader(test_ds, batch_size=64, shuffle=False, collate_fn=collator)
+
+    # Bobot kelas: meniru class_weight='balanced' pada SVM.
+    counts = y_train.value_counts()
+    weights = torch.tensor(
+        [len(y_train) / (len(LABELS) * counts[label]) for label in LABELS],
+        dtype=torch.float32,
+        device=device,
+    )
+    print("Class weights:", {label: round(float(w), 4) for label, w in zip(LABELS, weights)})
+
+    def fresh_model():
+        return AutoModelForSequenceClassification.from_pretrained(
+            MODEL_NAME, num_labels=len(LABELS)
+        ).to(device)
+
+    # ---- Fase 1: pilih epoch terbaik di validation -------------------------
+    print("\n=== Fase 1: latih di train, pantau validation ===")
+    model = fresh_model()
+    best_epoch, history, best_f1 = run_epochs(
+        model, train_loader, val_loader, device, EPOCHS, LEARNING_RATE, weights, "train"
+    )
+    print(f"Epoch terbaik: {best_epoch} (val macro-F1={best_f1:.4f})")
+
+    # ---- Fase 2: latih ulang di train+val, uji sekali di test --------------
+    print(f"\n=== Fase 2: latih ulang di train+val selama {best_epoch} epoch ===")
+    X_full = pd.concat([X_train, X_val])
+    y_full = pd.concat([y_train, y_val])
+    full_ds = TextDataset(X_full.tolist(), [to_ids[v] for v in y_full], tokenizer, MAX_LEN)
+    full_loader = DataLoader(full_ds, batch_size=BATCH_SIZE, shuffle=True, collate_fn=collator)
+
+    counts_full = y_full.value_counts()
+    weights_full = torch.tensor(
+        [len(y_full) / (len(LABELS) * counts_full[label]) for label in LABELS],
+        dtype=torch.float32,
+        device=device,
+    )
+    final_model = fresh_model()
+    run_epochs(
+        final_model, full_loader, None, device, best_epoch, LEARNING_RATE, weights_full, "full"
+    )
+
+    # ---- Evaluasi test -----------------------------------------------------
+    test_loss, test_f1, truths, preds = evaluate(final_model, test_loader, device)
+    accuracy = accuracy_score(truths, preds)
+    macro_f1 = f1_score(truths, preds, average="macro")
+    matrix = confusion_matrix(truths, preds, labels=list(range(len(LABELS))))
+    report = classification_report(
+        truths, preds, labels=list(range(len(LABELS))), target_names=LABELS, digits=4
+    )
+    per_class = {}
+    for index, label in enumerate(LABELS):
+        mask_t = truths == index
+        tp = int(((preds == index) & mask_t).sum())
+        precision = tp / max(1, int((preds == index).sum()))
+        recall = tp / max(1, int(mask_t.sum()))
+        f1 = 2 * precision * recall / max(1e-9, precision + recall)
+        per_class[label] = {
+            "precision": round(precision, 4),
+            "recall": round(recall, 4),
+            "f1": round(f1, 4),
+            "support": int(mask_t.sum()),
+        }
+
+    print("\n=== Hasil test IndoBERT ===")
+    print(f"accuracy={accuracy:.4f}  macro_f1={macro_f1:.4f}")
+    print(report)
+    print("Confusion matrix (baris=aktual, kolom=prediksi):")
+    print(matrix)
+
+    comparison = {}
+    if METRICS_PATH.exists():
+        baseline = json.loads(METRICS_PATH.read_text(encoding="utf-8"))
+        best = baseline.get("best_metrics", {})
+        comparison = {
+            "svm_accuracy": best.get("accuracy"),
+            "svm_macro_f1": best.get("macro_f1"),
+            "delta_accuracy": round(accuracy - float(best.get("accuracy", 0)), 4),
+            "delta_macro_f1": round(macro_f1 - float(best.get("macro_f1", 0)), 4),
+        }
+        print("\n=== Perbandingan dengan baseline SVM ===")
+        print(json.dumps(comparison, indent=2))
+
+    INDOBERT_METRICS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "model_name": MODEL_NAME,
+        "model_type": "indobert",
+        "device": str(device),
+        "max_len": MAX_LEN,
+        "batch_size": BATCH_SIZE,
+        "learning_rate": LEARNING_RATE,
+        "epochs_tried": EPOCHS,
+        "best_epoch": best_epoch,
+        "validation_macro_f1": round(best_f1, 4),
+        "test_loss": round(test_loss, 4),
+        "test_size": int(len(y_test)),
+        "accuracy": round(float(accuracy), 4),
+        "macro_f1": round(float(macro_f1), 4),
+        "per_class": per_class,
+        "confusion_matrix": matrix.tolist(),
+        "labels": LABELS,
+        "history": history,
+        "comparison_to_svm": comparison,
+        "use_stemming": False,
+        "input_column": "text_final",
+        "split": {"random_state": RANDOM_STATE, "test_size": 0.1, "val_size": 0.1},
+    }
+    INDOBERT_METRICS_PATH.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    REPORT_PATH.write_text(
+        f"IndoBERT ({MODEL_NAME})\n"
+        f"best_epoch={best_epoch}  val_macro_f1={best_f1:.4f}\n"
+        f"test_accuracy={accuracy:.4f}  test_macro_f1={macro_f1:.4f}\n\n"
+        f"{report}\n"
+        f"Confusion matrix:\n{matrix}\n",
+        encoding="utf-8",
+    )
+
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    final_model.save_pretrained(MODEL_DIR, safe_serialization=True)
+    tokenizer.save_pretrained(MODEL_DIR)
+    (MODEL_DIR / "label_map.json").write_text(
+        json.dumps(to_ids, indent=2), encoding="utf-8"
+    )
+
+    print(f"\nMetrik  : {INDOBERT_METRICS_PATH}")
+    print(f"Laporan : {REPORT_PATH}")
+    print(f"Model   : {MODEL_DIR}")
+
+
+if __name__ == "__main__":
+    main()
