@@ -234,20 +234,31 @@ def run_epochs(
                 print(f"  [{tag}] epoch {epoch} step {step}/{len(train_loader)} "
                       f"loss={running / step:.4f}", flush=True)
 
-        eval_loader = val_loader if val_loader is not None else train_loader
-        val_loss, val_f1, _, _ = evaluate(model, eval_loader, device)
         train_f1 = None
-        if train_probe_loader is not None:
-            _, train_f1, _, _ = evaluate(model, train_probe_loader, device)
+        if val_loader is None:
+            # Fase 2 tidak punya validation set; evaluasi penuh tiap epoch cuma
+            # membuang waktu tanpa memengaruhi keputusan apa pun.
+            val_loss, val_f1 = float("nan"), -1.0
+        else:
+            val_loss, val_f1, _, _ = evaluate(model, val_loader, device)
+            if train_probe_loader is not None:
+                _, train_f1, _, _ = evaluate(model, train_probe_loader, device)
         elapsed = time.time() - started
         history[f"epoch_{epoch}"] = {
             "train_loss": round(running / len(train_loader), 4),
             "train_macro_f1_sample": None if train_f1 is None else round(train_f1, 4),
-            "val_loss": round(val_loss, 4),
-            "val_macro_f1": round(val_f1, 4),
+            "val_loss": None if val_loader is None else round(val_loss, 4),
+            "val_macro_f1": None if val_loader is None else round(val_f1, 4),
             "generalization_gap": None if train_f1 is None else round(train_f1 - val_f1, 4),
             "seconds": round(elapsed, 1),
         }
+        if val_loader is None:
+            print(
+                f"  [{tag}] epoch {epoch}: train_loss={running / len(train_loader):.4f} "
+                f"({elapsed:.0f}s)",
+                flush=True,
+            )
+            continue
         gap = "" if train_f1 is None else f" train_f1={train_f1:.4f} gap={train_f1 - val_f1:+.4f}"
         print(
             f"  [{tag}] epoch {epoch}: train_loss={running / len(train_loader):.4f} "
