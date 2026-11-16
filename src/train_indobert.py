@@ -17,6 +17,7 @@ Jalankan di GPU (Colab T4):
 
 from __future__ import annotations
 
+import argparse
 import json
 import random
 import time
@@ -43,9 +44,6 @@ from transformers import (
 ROOT = Path(__file__).resolve().parents[1]
 DATA_PATH = ROOT / "data" / "processed" / "dataset_clean.csv"
 METRICS_PATH = ROOT / "results" / "metrics.json"
-INDOBERT_METRICS_PATH = ROOT / "results" / "indobert_metrics.json"
-REPORT_PATH = ROOT / "results" / "indobert_classification_report.txt"
-MODEL_DIR = ROOT / "models" / "indobert"
 
 RANDOM_STATE = 42
 MODEL_NAME = "indobenchmark/indobert-base-p1"
@@ -57,6 +55,29 @@ EPOCHS = 4
 WEIGHT_DECAY = 0.01
 WARMUP_RATIO = 0.1
 MAX_GRAD_NORM = 1.0
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Fine-tuning IndoBERT 3 kelas.")
+    parser.add_argument(
+        "--data",
+        type=Path,
+        default=DATA_PATH,
+        help="CSV berisi kolom text_final dan label.",
+    )
+    parser.add_argument("--tag", default="ibrohim", help="Sufiks nama artefak.")
+    parser.add_argument("--model-name", default=MODEL_NAME)
+    parser.add_argument("--epochs", type=int, default=EPOCHS)
+    parser.add_argument("--max-len", type=int, default=MAX_LEN)
+    parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
+    parser.add_argument("--lr", type=float, default=LEARNING_RATE)
+    parser.add_argument(
+        "--baseline",
+        type=Path,
+        default=None,
+        help="metrics.json pembanding (opsional).",
+    )
+    return parser.parse_args()
 
 
 def set_seed(seed: int = RANDOM_STATE) -> None:
@@ -74,9 +95,9 @@ def pick_device() -> torch.device:
     return torch.device("cpu")
 
 
-def load_dataset() -> pd.DataFrame:
-    """Identik dengan `src/train.py` supaya split reproducible."""
-    frame = pd.read_csv(DATA_PATH)
+def load_dataset(path: Path = DATA_PATH) -> pd.DataFrame:
+    """Kolom wajib: `text_final` dan `label`."""
+    frame = pd.read_csv(path)
     frame = frame.dropna(subset=["text_final", "label"])
     frame = frame[frame["text_final"].str.strip().str.len() > 0]
     return frame.reset_index(drop=True)
@@ -195,13 +216,28 @@ def run_epochs(
 
 
 def main() -> None:
+    args = parse_args()
+
+    # Argumen menimpa konstanta modul; semua pemakaian ada di dalam main().
+    MODEL_NAME = args.model_name
+    MAX_LEN = args.max_len
+    BATCH_SIZE = args.batch_size
+    LEARNING_RATE = args.lr
+    EPOCHS = args.epochs
+    data_path = Path(args.data)
+    tag = args.tag
+    metrics_out = ROOT / "results" / f"indobert_{tag}_metrics.json"
+    report_out = ROOT / "results" / f"indobert_{tag}_classification_report.txt"
+    model_out = ROOT / "models" / f"indobert_{tag}"
+
     set_seed()
     device = pick_device()
-    print(f"Device: {device} ({torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'})")
-    print(f"Model : {MODEL_NAME}")
+    print(f"Device : {device} ({torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'})")
+    print(f"Model  : {MODEL_NAME}")
+    print(f"Dataset: {data_path} (tag={tag})")
 
     torch.set_num_threads(max(1, torch.get_num_threads()))
-    frame = load_dataset()
+    frame = load_dataset(data_path)
     print(f"Total data: {len(frame):,}")
 
     X = frame["text_final"]
@@ -303,19 +339,20 @@ def main() -> None:
     print(matrix)
 
     comparison = {}
-    if METRICS_PATH.exists():
-        baseline = json.loads(METRICS_PATH.read_text(encoding="utf-8"))
+    baseline_path = args.baseline
+    if baseline_path and Path(baseline_path).exists():
+        baseline = json.loads(Path(baseline_path).read_text(encoding="utf-8"))
         best = baseline.get("best_metrics", {})
         comparison = {
-            "svm_accuracy": best.get("accuracy"),
-            "svm_macro_f1": best.get("macro_f1"),
+            "baseline_accuracy": best.get("accuracy"),
+            "baseline_macro_f1": best.get("macro_f1"),
             "delta_accuracy": round(accuracy - float(best.get("accuracy", 0)), 4),
             "delta_macro_f1": round(macro_f1 - float(best.get("macro_f1", 0)), 4),
         }
-        print("\n=== Perbandingan dengan baseline SVM ===")
+        print("\n=== Perbandingan dengan baseline ===")
         print(json.dumps(comparison, indent=2))
 
-    INDOBERT_METRICS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    metrics_out.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "model_name": MODEL_NAME,
         "model_type": "indobert",
@@ -334,15 +371,17 @@ def main() -> None:
         "confusion_matrix": matrix.tolist(),
         "labels": LABELS,
         "history": history,
-        "comparison_to_svm": comparison,
+        "comparison_to_baseline": comparison,
+        "dataset": str(data_path.relative_to(ROOT)) if str(data_path).startswith(str(ROOT)) else str(data_path),
+        "tag": tag,
         "use_stemming": False,
         "input_column": "text_final",
         "split": {"random_state": RANDOM_STATE, "test_size": 0.1, "val_size": 0.1},
     }
-    INDOBERT_METRICS_PATH.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    metrics_out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
-    REPORT_PATH.write_text(
-        f"IndoBERT ({MODEL_NAME})\n"
+    report_out.write_text(
+        f"IndoBERT ({MODEL_NAME}) - dataset {data_path.name}\n"
         f"best_epoch={best_epoch}  val_macro_f1={best_f1:.4f}\n"
         f"test_accuracy={accuracy:.4f}  test_macro_f1={macro_f1:.4f}\n\n"
         f"{report}\n"
@@ -350,16 +389,16 @@ def main() -> None:
         encoding="utf-8",
     )
 
-    MODEL_DIR.mkdir(parents=True, exist_ok=True)
-    final_model.save_pretrained(MODEL_DIR, safe_serialization=True)
-    tokenizer.save_pretrained(MODEL_DIR)
-    (MODEL_DIR / "label_map.json").write_text(
+    model_out.mkdir(parents=True, exist_ok=True)
+    final_model.save_pretrained(model_out, safe_serialization=True)
+    tokenizer.save_pretrained(model_out)
+    (model_out / "label_map.json").write_text(
         json.dumps(to_ids, indent=2), encoding="utf-8"
     )
 
-    print(f"\nMetrik  : {INDOBERT_METRICS_PATH}")
-    print(f"Laporan : {REPORT_PATH}")
-    print(f"Model   : {MODEL_DIR}")
+    print(f"\nMetrik  : {metrics_out}")
+    print(f"Laporan : {report_out}")
+    print(f"Model   : {model_out}")
 
 
 if __name__ == "__main__":
