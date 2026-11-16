@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import random
 import time
 from pathlib import Path
@@ -72,12 +73,44 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
     parser.add_argument("--lr", type=float, default=LEARNING_RATE)
     parser.add_argument(
+        "--weighting",
+        choices=["inverse", "sqrt", "none"],
+        default="sqrt",
+        help=(
+            "inverse = setara class_weight='balanced'; sqrt = versi lebih lunak "
+            "(risiko menghafal kelas minoritas lebih kecil); none = tanpa bobot."
+        ),
+    )
+    parser.add_argument(
+        "--label-smoothing",
+        type=float,
+        default=0.05,
+        help="Label smoothing untuk mengurangi overconfidence.",
+    )
+    parser.add_argument(
+        "--patience",
+        type=int,
+        default=2,
+        help="Berhenti awal bila val macro-F1 tidak naik selama N epoch (0 = mati).",
+    )
+    parser.add_argument(
         "--baseline",
         type=Path,
         default=None,
         help="metrics.json pembanding (opsional).",
     )
     return parser.parse_args()
+
+
+def compute_class_weights(series, device, mode: str) -> torch.Tensor | None:
+    """Bobot kelas untuk CrossEntropyLoss."""
+    if mode == "none":
+        return None
+    total = len(series)
+    raw = [total / (len(LABELS) * series[label]) for label in LABELS]
+    if mode == "sqrt":
+        raw = [math.sqrt(value) for value in raw]
+    return torch.tensor(raw, dtype=torch.float32, device=device)
 
 
 def set_seed(seed: int = RANDOM_STATE) -> None:
@@ -147,8 +180,16 @@ def run_epochs(
     lr: float,
     class_weights: torch.Tensor | None,
     tag: str,
+    label_smoothing: float = 0.0,
+    patience: int = 0,
+    train_probe_loader=None,
 ) -> tuple[int, dict[str, float], float]:
-    """Latih `epochs` epoch, kembalikan epoch terbaik menurut val macro-F1."""
+    """Latih `epochs` epoch, kembalikan epoch terbaik menurut val macro-F1.
+
+    `train_probe_loader` dipakai untuk mengukur macro-F1 pada sebagian data
+    latih, supaya selisih train vs validation bisa dilaporkan sebagai bukti
+    model tidak sekadar menghafal.
+    """
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=lr, weight_decay=WEIGHT_DECAY
     )
@@ -158,11 +199,14 @@ def run_epochs(
         num_warmup_steps=int(total_steps * WARMUP_RATIO),
         num_training_steps=total_steps,
     )
-    criterion = torch.nn.CrossEntropyLoss(weight=class_weights)
+    criterion = torch.nn.CrossEntropyLoss(
+        weight=class_weights, label_smoothing=label_smoothing
+    )
     use_amp = device.type == "cuda"
     scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
 
     best_epoch, best_f1, best_state, history = 1, -1.0, None, {}
+    stale_epochs = 0
     for epoch in range(1, epochs + 1):
         model.train()
         started = time.time()
@@ -192,16 +236,22 @@ def run_epochs(
 
         eval_loader = val_loader if val_loader is not None else train_loader
         val_loss, val_f1, _, _ = evaluate(model, eval_loader, device)
+        train_f1 = None
+        if train_probe_loader is not None:
+            _, train_f1, _, _ = evaluate(model, train_probe_loader, device)
         elapsed = time.time() - started
         history[f"epoch_{epoch}"] = {
             "train_loss": round(running / len(train_loader), 4),
+            "train_macro_f1_sample": None if train_f1 is None else round(train_f1, 4),
             "val_loss": round(val_loss, 4),
             "val_macro_f1": round(val_f1, 4),
+            "generalization_gap": None if train_f1 is None else round(train_f1 - val_f1, 4),
             "seconds": round(elapsed, 1),
         }
+        gap = "" if train_f1 is None else f" train_f1={train_f1:.4f} gap={train_f1 - val_f1:+.4f}"
         print(
             f"  [{tag}] epoch {epoch}: train_loss={running / len(train_loader):.4f} "
-            f"val_loss={val_loss:.4f} val_macro_f1={val_f1:.4f} ({elapsed:.0f}s)",
+            f"val_loss={val_loss:.4f} val_macro_f1={val_f1:.4f}{gap} ({elapsed:.0f}s)",
             flush=True,
         )
         if val_f1 > best_f1:
@@ -210,6 +260,16 @@ def run_epochs(
             best_state = {
                 k: v.detach().cpu().clone() for k, v in model.state_dict().items()
             }
+            stale_epochs = 0
+        else:
+            stale_epochs += 1
+            if patience and stale_epochs >= patience:
+                print(
+                    f"  [{tag}] berhenti awal: val macro-F1 tidak naik "
+                    f"{patience} epoch berturut-turut",
+                    flush=True,
+                )
+                break
     if best_state is not None:
         model.load_state_dict(best_state)
     return best_epoch, history, best_f1
@@ -266,14 +326,22 @@ def main() -> None:
     val_loader = DataLoader(val_ds, batch_size=64, shuffle=False, collate_fn=collator)
     test_loader = DataLoader(test_ds, batch_size=64, shuffle=False, collate_fn=collator)
 
-    # Bobot kelas: meniru class_weight='balanced' pada SVM.
-    counts = y_train.value_counts()
-    weights = torch.tensor(
-        [len(y_train) / (len(LABELS) * counts[label]) for label in LABELS],
-        dtype=torch.float32,
-        device=device,
+    # Bobot kelas: `sqrt` mencegah model menghafal kelas minoritas yang
+    # jumlahnya hanya ratusan.
+    weights = compute_class_weights(y_train.value_counts(), device, args.weighting)
+    print("Weighting:", args.weighting)
+    if weights is not None:
+        print("Class weights:", {label: round(float(w), 4) for label, w in zip(LABELS, weights)})
+
+    # Sampel kecil data latih untuk mengukur selisih train vs validation.
+    probe_size = min(2_000, len(train_ds))
+    probe_indices = random.sample(range(len(train_ds)), probe_size)
+    probe_loader = DataLoader(
+        torch.utils.data.Subset(train_ds, probe_indices),
+        batch_size=64,
+        shuffle=False,
+        collate_fn=collator,
     )
-    print("Class weights:", {label: round(float(w), 4) for label, w in zip(LABELS, weights)})
 
     def fresh_model():
         model = AutoModelForSequenceClassification.from_pretrained(
@@ -288,7 +356,17 @@ def main() -> None:
     print("\n=== Fase 1: latih di train, pantau validation ===")
     model = fresh_model()
     best_epoch, history, best_f1 = run_epochs(
-        model, train_loader, val_loader, device, EPOCHS, LEARNING_RATE, weights, "train"
+        model,
+        train_loader,
+        val_loader,
+        device,
+        EPOCHS,
+        LEARNING_RATE,
+        weights,
+        "train",
+        label_smoothing=args.label_smoothing,
+        patience=args.patience,
+        train_probe_loader=probe_loader,
     )
     print(f"Epoch terbaik: {best_epoch} (val macro-F1={best_f1:.4f})")
 
@@ -299,15 +377,18 @@ def main() -> None:
     full_ds = TextDataset(X_full.tolist(), [to_ids[v] for v in y_full], tokenizer, MAX_LEN)
     full_loader = DataLoader(full_ds, batch_size=BATCH_SIZE, shuffle=True, collate_fn=collator)
 
-    counts_full = y_full.value_counts()
-    weights_full = torch.tensor(
-        [len(y_full) / (len(LABELS) * counts_full[label]) for label in LABELS],
-        dtype=torch.float32,
-        device=device,
-    )
+    weights_full = compute_class_weights(y_full.value_counts(), device, args.weighting)
     final_model = fresh_model()
     run_epochs(
-        final_model, full_loader, None, device, best_epoch, LEARNING_RATE, weights_full, "full"
+        final_model,
+        full_loader,
+        None,
+        device,
+        best_epoch,
+        LEARNING_RATE,
+        weights_full,
+        "full",
+        label_smoothing=args.label_smoothing,
     )
 
     # ---- Evaluasi test -----------------------------------------------------
@@ -362,6 +443,9 @@ def main() -> None:
         "learning_rate": LEARNING_RATE,
         "epochs_tried": EPOCHS,
         "best_epoch": best_epoch,
+        "weighting": args.weighting,
+        "label_smoothing": args.label_smoothing,
+        "patience": args.patience,
         "validation_macro_f1": round(best_f1, 4),
         "test_loss": round(test_loss, 4),
         "test_size": int(len(y_test)),
