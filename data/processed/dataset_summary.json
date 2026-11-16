@@ -1,0 +1,45 @@
+{
+  "jumlah_baris_mentah": 13169,
+  "jumlah_baris_setelah_dedup": 12828,
+  "jumlah_duplikat_dibuang": 341,
+  "distribusi_kelas": {
+    "Normal": 5701,
+    "Abusive": 1709,
+    "Hate Speech": 5418
+  },
+  "persentase_kelas": {
+    "Normal": 44.44,
+    "Abusive": 13.32,
+    "Hate Speech": 42.24
+  },
+  "panjang_karakter": {
+    "min": 3,
+    "median": 96.0,
+    "mean": 111.68,
+    "max": 501
+  },
+  "panjang_kata": {
+    "min": 1,
+    "median": 16.0,
+    "mean": 18.09,
+    "max": 143
+  },
+  "jumlah_kosakata_unik": 19155,
+  "contoh_per_kelas": {
+    "Normal": [
+      "kadang aku berpikir kenapa aku tetap percaya pada tuhan padahal aku selalu jatuh berkali kali kadang aku merasa tuhan itu meninggalkan aku sendirian ketika orang tuaku berencana berpisah ketika kakakku lebih memilih jadi kristen ketika aku anak ter",
+      "aku itu aku dan ku tahu matamu sipit tapi dilihat dari mana itu aku",
+      "deklarasi pilihan kepala daerah aman dan anti hoaks warga dukuh sari jabon"
+    ],
+    "Abusive": [
+      "siapa yang telat memberi tahu kamu edan sarap gue bergaul dengan cigax jifla calis sama siapa itu licew juga",
+      "gue baru saja selesai re watch aldnoah zero paling kampret memang akhirnya karakter utama cowoknya kena friendzone bro xd",
+      "enak lagi kalau sambil ngewe"
+    ],
+    "Hate Speech": [
+      "di saat semua cowok berusaha melacak perhatian gue kamu lantas remehkan perhatian yang gue kasih khusus ke kamu basic kamu cowok bego",
+      "kaum cebong kafir sudah kelihatan dongoknya dari awal tambah dongok lagi haha",
+      "ya bani taplak dan kawan kawan xf x f x x xf x f x x xf x f x x"
+    ]
+  }
+}

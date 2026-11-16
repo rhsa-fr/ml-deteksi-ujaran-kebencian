@@ -1,0 +1,11 @@
+# Dependensi lengkap untuk pipeline lokal, training, dan build laporan.
+-r requirements.txt
+
+pandas>=2.0
+matplotlib>=3.7
+seaborn>=0.12
+Sastrawi>=1.0.1
+uvicorn[standard]>=0.27
+python-docx>=1.1
+python-pptx>=0.6
+Pillow>=10.0

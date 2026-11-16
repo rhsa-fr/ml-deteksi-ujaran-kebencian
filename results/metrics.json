@@ -1,0 +1,417 @@
+{
+  "generated_at": "2026-11-16T20:38:09",
+  "environment": {
+    "python": "3.11.9",
+    "scikit_learn": "1.9.0",
+    "pandas": "3.0.5",
+    "numpy": "2.4.6"
+  },
+  "dataset": {
+    "jumlah_baris_mentah": 13169,
+    "jumlah_baris_setelah_dedup": 12828,
+    "jumlah_duplikat_dibuang": 341,
+    "distribusi_kelas": {
+      "Normal": 5701,
+      "Abusive": 1709,
+      "Hate Speech": 5418
+    },
+    "persentase_kelas": {
+      "Normal": 44.44,
+      "Abusive": 13.32,
+      "Hate Speech": 42.24
+    },
+    "panjang_karakter": {
+      "min": 3,
+      "median": 96.0,
+      "mean": 111.68,
+      "max": 501
+    },
+    "panjang_kata": {
+      "min": 1,
+      "median": 16.0,
+      "mean": 18.09,
+      "max": 143
+    },
+    "jumlah_kosakata_unik": 19155,
+    "contoh_per_kelas": {
+      "Normal": [
+        "kadang aku berpikir kenapa aku tetap percaya pada tuhan padahal aku selalu jatuh berkali kali kadang aku merasa tuhan itu meninggalkan aku sendirian ketika orang tuaku berencana berpisah ketika kakakku lebih memilih jadi kristen ketika aku anak ter",
+        "aku itu aku dan ku tahu matamu sipit tapi dilihat dari mana itu aku",
+        "deklarasi pilihan kepala daerah aman dan anti hoaks warga dukuh sari jabon"
+      ],
+      "Abusive": [
+        "siapa yang telat memberi tahu kamu edan sarap gue bergaul dengan cigax jifla calis sama siapa itu licew juga",
+        "gue baru saja selesai re watch aldnoah zero paling kampret memang akhirnya karakter utama cowoknya kena friendzone bro xd",
+        "enak lagi kalau sambil ngewe"
+      ],
+      "Hate Speech": [
+        "di saat semua cowok berusaha melacak perhatian gue kamu lantas remehkan perhatian yang gue kasih khusus ke kamu basic kamu cowok bego",
+        "kaum cebong kafir sudah kelihatan dongoknya dari awal tambah dongok lagi haha",
+        "ya bani taplak dan kawan kawan xf x f x x xf x f x x xf x f x x"
+      ]
+    }
+  },
+  "split": {
+    "train": 10262,
+    "validation": 1283,
+    "test": 1283,
+    "train_full": 11545
+  },
+  "tuning": {
+    "best": {
+      "nb": 0.7697819973310986,
+      "lr": 0.8023290074542148,
+      "svm": 0.8055874415637173
+    },
+    "trials": [
+      {
+        "model": "nb",
+        "params": {
+          "alpha": 0.1
+        },
+        "val_macro_f1": 0.769782
+      },
+      {
+        "model": "nb",
+        "params": {
+          "alpha": 0.5
+        },
+        "val_macro_f1": 0.759685
+      },
+      {
+        "model": "nb",
+        "params": {
+          "alpha": 1.0
+        },
+        "val_macro_f1": 0.73137
+      },
+      {
+        "model": "lr",
+        "params": {
+          "C": 0.5
+        },
+        "val_macro_f1": 0.798981
+      },
+      {
+        "model": "lr",
+        "params": {
+          "C": 1.0
+        },
+        "val_macro_f1": 0.802329
+      },
+      {
+        "model": "lr",
+        "params": {
+          "C": 5.0
+        },
+        "val_macro_f1": 0.799813
+      },
+      {
+        "model": "svm",
+        "params": {
+          "C": 0.1
+        },
+        "val_macro_f1": 0.805587
+      },
+      {
+        "model": "svm",
+        "params": {
+          "C": 0.5
+        },
+        "val_macro_f1": 0.79966
+      },
+      {
+        "model": "svm",
+        "params": {
+          "C": 1.0
+        },
+        "val_macro_f1": 0.788198
+      },
+      {
+        "model": "svm",
+        "params": {
+          "C": 2.0
+        },
+        "val_macro_f1": 0.780889
+      }
+    ]
+  },
+  "cross_validation": {
+    "model": "svm",
+    "params": {
+      "C": 0.1
+    },
+    "folds": 5,
+    "macro_f1_mean": 0.786158,
+    "macro_f1_std": 0.007781,
+    "scores": [
+      0.791755,
+      0.788061,
+      0.78491,
+      0.794138,
+      0.771926
+    ]
+  },
+  "models": {
+    "nb": {
+      "params": {
+        "alpha": 0.1
+      },
+      "val_macro_f1": 0.769782,
+      "test": {
+        "accuracy": 0.798909,
+        "macro_f1": 0.760112,
+        "weighted_f1": 0.801772,
+        "per_class": {
+          "Normal": {
+            "precision": 0.865314,
+            "recall": 0.822807,
+            "f1": 0.843525,
+            "support": 570
+          },
+          "Abusive": {
+            "precision": 0.570732,
+            "recall": 0.684211,
+            "f1": 0.62234,
+            "support": 171
+          },
+          "Hate Speech": {
+            "precision": 0.81903,
+            "recall": 0.809963,
+            "f1": 0.814471,
+            "support": 542
+          }
+        },
+        "classification_report": {
+          "Normal": {
+            "precision": 0.8653136531365314,
+            "recall": 0.8228070175438597,
+            "f1-score": 0.8435251798561151,
+            "support": 570.0
+          },
+          "Abusive": {
+            "precision": 0.5707317073170731,
+            "recall": 0.6842105263157895,
+            "f1-score": 0.6223404255319149,
+            "support": 171.0
+          },
+          "Hate Speech": {
+            "precision": 0.8190298507462687,
+            "recall": 0.8099630996309963,
+            "f1-score": 0.8144712430426716,
+            "support": 542.0
+          },
+          "accuracy": 0.798908807482463,
+          "macro avg": {
+            "precision": 0.7516917370666244,
+            "recall": 0.7723268811635485,
+            "f1-score": 0.7601122828102338,
+            "support": 1283.0
+          },
+          "weighted avg": {
+            "precision": 0.8064988958250351,
+            "recall": 0.798908807482463,
+            "f1-score": 0.8017716126368443,
+            "support": 1283.0
+          }
+        }
+      }
+    },
+    "lr": {
+      "params": {
+        "C": 1.0
+      },
+      "val_macro_f1": 0.802329,
+      "test": {
+        "accuracy": 0.819953,
+        "macro_f1": 0.785885,
+        "weighted_f1": 0.821568,
+        "per_class": {
+          "Normal": {
+            "precision": 0.858377,
+            "recall": 0.87193,
+            "f1": 0.8651,
+            "support": 570
+          },
+          "Abusive": {
+            "precision": 0.62,
+            "recall": 0.725146,
+            "f1": 0.668464,
+            "support": 171
+          },
+          "Hate Speech": {
+            "precision": 0.855159,
+            "recall": 0.795203,
+            "f1": 0.824092,
+            "support": 542
+          }
+        },
+        "classification_report": {
+          "Normal": {
+            "precision": 0.8583765112262521,
+            "recall": 0.8719298245614036,
+            "f1-score": 0.8651000870322019,
+            "support": 570.0
+          },
+          "Abusive": {
+            "precision": 0.62,
+            "recall": 0.7251461988304093,
+            "f1-score": 0.6684636118598383,
+            "support": 171.0
+          },
+          "Hate Speech": {
+            "precision": 0.8551587301587301,
+            "recall": 0.7952029520295203,
+            "f1-score": 0.8240917782026769,
+            "support": 542.0
+          },
+          "accuracy": 0.8199532346063912,
+          "macro avg": {
+            "precision": 0.7778450804616607,
+            "recall": 0.7974263251404444,
+            "f1-score": 0.7858851590315723,
+            "support": 1283.0
+          },
+          "weighted avg": {
+            "precision": 0.8252460195985936,
+            "recall": 0.8199532346063912,
+            "f1-score": 0.8215682548887282,
+            "support": 1283.0
+          }
+        }
+      }
+    },
+    "svm": {
+      "params": {
+        "C": 0.1
+      },
+      "val_macro_f1": 0.805587,
+      "test": {
+        "accuracy": 0.837101,
+        "macro_f1": 0.807526,
+        "weighted_f1": 0.836526,
+        "per_class": {
+          "Normal": {
+            "precision": 0.855219,
+            "recall": 0.891228,
+            "f1": 0.872852,
+            "support": 570
+          },
+          "Abusive": {
+            "precision": 0.722892,
+            "recall": 0.701754,
+            "f1": 0.712166,
+            "support": 171
+          },
+          "Hate Speech": {
+            "precision": 0.852772,
+            "recall": 0.822878,
+            "f1": 0.837559,
+            "support": 542
+          }
+        },
+        "classification_report": {
+          "Normal": {
+            "precision": 0.8552188552188552,
+            "recall": 0.8912280701754386,
+            "f1-score": 0.872852233676976,
+            "support": 570.0
+          },
+          "Abusive": {
+            "precision": 0.7228915662650602,
+            "recall": 0.7017543859649122,
+            "f1-score": 0.712166172106825,
+            "support": 171.0
+          },
+          "Hate Speech": {
+            "precision": 0.8527724665391969,
+            "recall": 0.8228782287822878,
+            "f1-score": 0.8375586854460094,
+            "support": 542.0
+          },
+          "accuracy": 0.8371005455962588,
+          "macro avg": {
+            "precision": 0.8102942960077041,
+            "recall": 0.805286894974213,
+            "f1-score": 0.8075256970766035,
+            "support": 1283.0
+          },
+          "weighted avg": {
+            "precision": 0.8365486221124844,
+            "recall": 0.8371005455962588,
+            "f1-score": 0.8365261076678725,
+            "support": 1283.0
+          }
+        }
+      }
+    }
+  },
+  "best_model": "svm",
+  "selected_on": "validation_macro_f1",
+  "use_stemming": false,
+  "best_metrics": {
+    "accuracy": 0.837101,
+    "macro_f1": 0.807526,
+    "weighted_f1": 0.836526,
+    "per_class": {
+      "Normal": {
+        "precision": 0.855219,
+        "recall": 0.891228,
+        "f1": 0.872852,
+        "support": 570
+      },
+      "Abusive": {
+        "precision": 0.722892,
+        "recall": 0.701754,
+        "f1": 0.712166,
+        "support": 171
+      },
+      "Hate Speech": {
+        "precision": 0.852772,
+        "recall": 0.822878,
+        "f1": 0.837559,
+        "support": 542
+      }
+    },
+    "classification_report": {
+      "Normal": {
+        "precision": 0.8552188552188552,
+        "recall": 0.8912280701754386,
+        "f1-score": 0.872852233676976,
+        "support": 570.0
+      },
+      "Abusive": {
+        "precision": 0.7228915662650602,
+        "recall": 0.7017543859649122,
+        "f1-score": 0.712166172106825,
+        "support": 171.0
+      },
+      "Hate Speech": {
+        "precision": 0.8527724665391969,
+        "recall": 0.8228782287822878,
+        "f1-score": 0.8375586854460094,
+        "support": 542.0
+      },
+      "accuracy": 0.8371005455962588,
+      "macro avg": {
+        "precision": 0.8102942960077041,
+        "recall": 0.805286894974213,
+        "f1-score": 0.8075256970766035,
+        "support": 1283.0
+      },
+      "weighted avg": {
+        "precision": 0.8365486221124844,
+        "recall": 0.8371005455962588,
+        "f1-score": 0.8365261076678725,
+        "support": 1283.0
+      }
+    }
+  },
+  "label_order": [
+    "Normal",
+    "Abusive",
+    "Hate Speech"
+  ],
+  "test_size": 1283,
+  "misclassified": 209
+}

@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NLP/26 — Deteksi Ujaran Kebencian</title>
+  <style>
+    :root {
+      --paper: #f2efe4;
+      --paper-2: #e8e3d3;
+      --ink: #0a0a0a;
+      --white: #fffdf5;
+      --lime: #c8ff00;
+      --blue: #2f5bff;
+      --orange: #ffb000;
+      --pink: #ff4fa3;
+      --red: #ff3b30;
+      --muted: #5b5b52;
+      --display: "Arial Black", "Helvetica Neue", Impact, sans-serif;
+      --mono: "Cascadia Mono", "Consolas", "SFMono-Regular", ui-monospace, monospace;
+      --body: "Helvetica Neue", Arial, sans-serif;
+      --border: 4px solid var(--ink);
+      --shadow: 10px 10px 0 var(--ink);
+      --shadow-sm: 5px 5px 0 var(--ink);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      background-color: var(--paper);
+      background-image: radial-gradient(rgba(10, 10, 10, 0.14) 0.7px, transparent 0.7px);
+      background-size: 7px 7px;
+      color: var(--ink);
+      font-family: var(--body);
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::selection { background: var(--lime); color: var(--ink); }
+
+    .ticker {
+      overflow: hidden;
+      background: var(--ink);
+      color: var(--lime);
+      border-bottom: var(--border);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 9px 0;
+    }
+
+    .ticker-track {
+      display: flex;
+      width: max-content;
+      gap: 2.2rem;
+      white-space: nowrap;
+      animation: ticker 34s linear infinite;
+    }
+
+    .ticker-track span::before { content: "///"; margin-right: 1rem; color: var(--pink); }
+
+    @keyframes ticker {
+      to { transform: translateX(-50%); }
+    }
+
+    .shell {
+      width: min(1240px, calc(100% - 36px));
+      margin: 0 auto;
+      padding: 26px 0 0;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+      border-bottom: var(--border);
+      padding-bottom: 14px;
+      margin-bottom: 34px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .brand-block {
+      display: inline-grid;
+      place-items: center;
+      min-width: 58px;
+      padding: 8px 10px;
+      background: var(--ink);
+      color: var(--lime);
+      font-family: var(--display);
+      font-size: 17px;
+      letter-spacing: -0.02em;
+      border: 3px solid var(--ink);
+      box-shadow: 4px 4px 0 var(--blue);
+    }
+
+    .top-meta {
+      text-align: right;
+      font-family: var(--mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      line-height: 1.7;
+    }
+
+    .top-meta strong { background: var(--pink); padding: 1px 5px; }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.55fr);
+      gap: 34px;
+      align-items: end;
+      margin-bottom: 38px;
+    }
+
+    .kicker {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border: 3px solid var(--ink);
+      background: var(--blue);
+      color: var(--white);
+      padding: 6px 9px;
+      margin-bottom: 18px;
+      transform: rotate(-1deg);
+      box-shadow: var(--shadow-sm);
+    }
+
+    h1 {
+      margin: 0;
+      font-family: var(--display);
+      font-size: clamp(48px, 8.6vw, 116px);
+      line-height: 0.86;
+      letter-spacing: -0.055em;
+      text-transform: uppercase;
+    }
+
+    h1 .marker {
+      display: inline-block;
+      background: var(--lime);
+      padding: 0 0.07em 0.02em;
+      margin: 0.04em 0;
+      border: 4px solid var(--ink);
+      transform: rotate(-1.2deg);
+      box-shadow: 7px 7px 0 var(--ink);
+    }
+
+    h1 .bang { color: var(--red); }
+
+    .hero-copy {
+      max-width: 58ch;
+      margin: 22px 0 0;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .hero-copy strong { background: var(--orange); padding: 0 3px; }
+
+    .hero-side {
+      display: grid;
+      gap: 22px;
+      justify-items: end;
+    }
+
+    .stamp {
+      position: relative;
+      display: inline-block;
+      transform: rotate(5deg);
+      border: 3px dashed var(--ink);
+      background: var(--pink);
+      color: var(--ink);
+      padding: 12px 16px;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      line-height: 1.5;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .stamp::after {
+      content: "VALID";
+      position: absolute;
+      right: -14px;
+      bottom: -12px;
+      background: var(--ink);
+      color: var(--lime);
+      font-size: 10px;
+      padding: 3px 6px;
+      transform: rotate(-4deg);
+    }
+
+    .specs {
+      width: 100%;
+      border: var(--border);
+      background: var(--white);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .specs-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 9px 11px;
+      border-bottom: 2px solid var(--ink);
+      font-family: var(--mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .specs-row:last-child { border-bottom: 0; }
+    .specs-row span { color: var(--muted); }
+    .specs-row strong { text-align: right; font-size: 13px; }
+
+    .workbench {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+      gap: 30px;
+      align-items: start;
+      margin-bottom: 30px;
+    }
+
+    .panel {
+      border: var(--border);
+      background: var(--white);
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: var(--border);
+      padding: 10px 12px;
+      background: var(--lime);
+    }
+
+    .result-panel .panel-head { background: var(--orange); }
+
+    .num {
+      display: inline-grid;
+      place-items: center;
+      width: 31px;
+      height: 31px;
+      background: var(--ink);
+      color: var(--white);
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+      flex: 0 0 auto;
+    }
+
+    .panel-head h2 {
+      margin: 0;
+      font-family: var(--display);
+      font-size: 17px;
+      letter-spacing: -0.02em;
+      text-transform: uppercase;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .panel-tag {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border: 2px solid var(--ink);
+      background: var(--white);
+      padding: 3px 6px;
+      white-space: nowrap;
+    }
+
+    .panel-body { padding: 18px; }
+
+    .field-label {
+      display: block;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 190px;
+      resize: vertical;
+      border: 3px solid var(--ink);
+      background: var(--paper);
+      color: var(--ink);
+      padding: 13px 14px;
+      font-family: var(--mono);
+      font-size: 13.5px;
+      line-height: 1.55;
+      outline: none;
+      box-shadow: inset 3px 3px 0 rgba(10, 10, 10, 0.08);
+      transition: background 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    textarea::placeholder { color: #77776d; }
+
+    textarea:focus {
+      background: var(--white);
+      box-shadow: inset 3px 3px 0 rgba(10, 10, 10, 0.08), 0 0 0 4px var(--blue);
+    }
+
+    .input-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      margin-top: 7px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 15px;
+    }
+
+    button {
+      font: inherit;
+      cursor: pointer;
+      border: 3px solid var(--ink);
+      background: var(--white);
+      color: var(--ink);
+      padding: 9px 12px;
+      font-family: var(--mono);
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      box-shadow: 4px 4px 0 var(--ink);
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
+    }
+
+    button:hover { background: var(--paper-2); }
+    button:active { transform: translate(4px, 4px); box-shadow: 0 0 0 var(--ink); }
+    button:focus-visible { outline: 4px solid var(--blue); outline-offset: 3px; }
+    button:disabled { opacity: 0.55; cursor: wait; transform: none; }
+
+    button.primary {
+      background: var(--ink);
+      color: var(--lime);
+      box-shadow: 5px 5px 0 var(--blue);
+      padding-inline: 16px;
+    }
+
+    button.primary:hover { background: #1c1c1c; }
+    button.primary:active { transform: translate(5px, 5px); box-shadow: 0 0 0 var(--blue); }
+
+    .samples {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 2px dashed var(--ink);
+    }
+
+    .samples-label {
+      width: 100%;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 1px;
+    }
+
+    .sample {
+      font-size: 10.5px;
+      padding: 6px 9px;
+      box-shadow: 3px 3px 0 var(--ink);
+    }
+
+    .sample[data-sample="normal"] { background: var(--lime); }
+    .sample[data-sample="abusive"] { background: var(--orange); }
+    .sample[data-sample="hate"] { background: var(--red); color: var(--white); }
+
+    .error {
+      margin-top: 14px;
+      border: 3px solid var(--ink);
+      background: var(--red);
+      color: var(--white);
+      padding: 10px 12px;
+      font-family: var(--mono);
+      font-size: 11.5px;
+      box-shadow: 4px 4px 0 var(--ink);
+    }
+
+    .placeholder {
+      border: 3px dashed var(--ink);
+      background:
+        repeating-linear-gradient(45deg, transparent 0 12px, rgba(10, 10, 10, 0.045) 12px 24px),
+        var(--paper);
+      min-height: 300px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 24px;
+    }
+
+    .placeholder .glyph {
+      width: 92px;
+      height: 92px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 14px;
+      border: 4px solid var(--ink);
+      border-radius: 50%;
+      font-family: var(--display);
+      font-size: 50px;
+      background: var(--lime);
+      box-shadow: var(--shadow-sm);
+      transform: rotate(-6deg);
+    }
+
+    .placeholder p {
+      margin: 0;
+      font-family: var(--mono);
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      max-width: 34ch;
+    }
+
+    .result-top {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .verdict {
+      display: inline-block;
+      border: 4px solid var(--ink);
+      padding: 7px 11px;
+      font-family: var(--display);
+      font-size: 18px;
+      line-height: 1.1;
+      text-transform: uppercase;
+      letter-spacing: -0.015em;
+      transform: rotate(-2deg);
+      box-shadow: 5px 5px 0 var(--ink);
+    }
+
+    .verdict.normal { background: var(--lime); color: var(--ink); }
+    .verdict.abusive { background: var(--orange); color: var(--ink); }
+    .verdict.hate { background: var(--red); color: var(--white); }
+
+    .confidence {
+      font-family: var(--mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      text-align: right;
+      color: var(--muted);
+    }
+
+    .confidence strong {
+      display: block;
+      font-family: var(--display);
+      font-size: 27px;
+      line-height: 1;
+      color: var(--ink);
+      letter-spacing: -0.03em;
+    }
+
+    .bars {
+      display: grid;
+      gap: 9px;
+      margin: 18px 0;
+      padding: 14px;
+      border: 3px solid var(--ink);
+      background: var(--paper);
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 92px minmax(0, 1fr) 52px;
+      gap: 9px;
+      align-items: center;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .bar-row .name { color: var(--ink); }
+    .bar-row .track {
+      display: block;
+      height: 18px;
+      border: 2px solid var(--ink);
+      background: var(--white);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .bar-row .fill {
+      display: block;
+      height: 100%;
+      width: 0;
+      transition: width 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+      background-image: repeating-linear-gradient(90deg, transparent 0 9px, rgba(10, 10, 10, 0.16) 9px 11px);
+    }
+
+    .fill.normal { background-color: var(--lime); }
+    .fill.abusive { background-color: var(--orange); }
+    .fill.hate { background-color: var(--red); }
+
+    .bar-row .pct { text-align: right; font-weight: 700; }
+
+    .tokens { margin-top: 15px; }
+
+    .tokens h3 {
+      margin: 0 0 8px;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .chip {
+      display: inline-block;
+      border: 2px solid var(--ink);
+      background: var(--white);
+      padding: 4px 7px;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      box-shadow: 2px 2px 0 var(--ink);
+    }
+
+    .chip small { font-size: 9px; opacity: 0.7; }
+    .chip.pos { background: var(--lime); }
+    .chip.neg { background: var(--pink); }
+
+    details {
+      margin-top: 18px;
+      border-top: 3px dashed var(--ink);
+      padding-top: 11px;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    summary { cursor: pointer; font-weight: 700; }
+    summary:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+
+    code {
+      display: block;
+      margin-top: 8px;
+      padding: 10px;
+      border: 2px solid var(--ink);
+      background: var(--paper);
+      color: var(--ink);
+      overflow-wrap: anywhere;
+      text-transform: none;
+      letter-spacing: 0;
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border: var(--border);
+      background: var(--ink);
+      color: var(--white);
+      margin-bottom: 34px;
+    }
+
+    .metric {
+      padding: 15px 14px;
+      border-right: 3px solid var(--paper);
+    }
+
+    .metric:last-child { border-right: 0; }
+
+    .metric .k {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #b9b9ae;
+      margin-bottom: 6px;
+    }
+
+    .metric .v {
+      font-family: var(--display);
+      font-size: 25px;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      color: var(--lime);
+      overflow-wrap: anywhere;
+    }
+
+    .metric:nth-child(2) .v { color: var(--orange); }
+    .metric:nth-child(3) .v { color: var(--white); font-size: 17px; }
+    .metric:nth-child(4) .v { color: var(--pink); }
+
+    footer {
+      background: var(--ink);
+      color: var(--paper);
+      border-top: var(--border);
+      padding: 22px 0 26px;
+      margin-top: 10px;
+    }
+
+    .footer-inner {
+      width: min(1240px, calc(100% - 36px));
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 14px 28px;
+      align-items: flex-end;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      line-height: 1.7;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .footer-inner a { color: var(--lime); text-decoration: none; border-bottom: 2px solid var(--lime); }
+    .footer-inner a:hover { background: var(--lime); color: var(--ink); }
+
+    .barcode {
+      display: flex;
+      gap: 3px;
+      align-items: flex-end;
+      height: 34px;
+      margin-top: 6px;
+    }
+
+    .barcode span { display: block; width: 3px; background: var(--paper); }
+    .barcode span:nth-child(3n) { width: 6px; }
+    .barcode span:nth-child(4n) { height: 70%; }
+    .barcode span:nth-child(5n) { height: 45%; }
+
+    @media (max-width: 980px) {
+      .hero, .workbench { grid-template-columns: 1fr; }
+      .hero-side { justify-items: start; grid-template-columns: auto 1fr; align-items: start; }
+      .stamp { justify-self: start; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .metric:nth-child(2) { border-right: 0; }
+      .metric:nth-child(-n+2) { border-bottom: 3px solid var(--paper); }
+    }
+
+    @media (max-width: 560px) {
+      .shell, .footer-inner { width: calc(100% - 22px); }
+      .topbar { flex-direction: column; gap: 12px; }
+      .top-meta { text-align: left; }
+      .hero-side { grid-template-columns: 1fr; }
+      .panel-body { padding: 13px; }
+      .panel-head h2 { font-size: 14px; }
+      .panel-tag { display: none; }
+      .actions button { flex: 1 1 auto; }
+      .bar-row { grid-template-columns: 78px minmax(0, 1fr) 46px; }
+      .metrics { grid-template-columns: 1fr; }
+      .metric { border-right: 0; border-bottom: 3px solid var(--paper); }
+      .metric:last-child { border-bottom: 0; }
+      .footer-inner { flex-direction: column; align-items: flex-start; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .ticker-track { animation: none; }
+      .bar-row .fill { transition: none; }
+      * { transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker-track">
+      <span>13.169 tweet bahasa Indonesia</span>
+      <span>3 kelas: normal / abusive / hate speech</span>
+      <span>TF-IDF word 1–2 gram + char 3–5 gram</span>
+      <span>Naive Bayes / Regresi Logistik / Linear SVM</span>
+      <span>macro-F1 di data uji</span>
+      <span>demo akademik — bukan alat moderasi produksi</span>
+      <span>13.169 tweet bahasa Indonesia</span>
+      <span>3 kelas: normal / abusive / hate speech</span>
+      <span>TF-IDF word 1–2 gram + char 3–5 gram</span>
+      <span>Naive Bayes / Regresi Logistik / Linear SVM</span>
+      <span>macro-F1 di data uji</span>
+      <span>demo akademik — bukan alat moderasi produksi</span>
+    </div>
+  </div>
+
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-block">NLP/26</span>
+        <span>Laboratorium Kecerdasan Buatan<br />Tugas Besar · Klasifikasi Teks</span>
+      </div>
+      <div class="top-meta">
+        Laporan penelitian terapan<br />
+        <strong>Kelompok 3–4 mahasiswa</strong><br />
+        Edisi November 2026
+      </div>
+    </header>
+
+    <section class="hero">
+      <div>
+        <div class="kicker">[01] Deteksi ujaran kebencian · bahasa Indonesia</div>
+        <h1>Kenali<br /><span class="marker">teks</span> sebelum<br />menyebar<span class="bang">.</span></h1>
+        <p class="hero-copy">
+          Model tiga kelas — <strong>Normal</strong>, <strong>Abusive</strong>, <strong>Hate Speech</strong> —
+          dilatih pada 13.169 tweet berbahasa Indonesia. Pipeline: praproses bahasa → TF-IDF →
+          tiga model klasik → evaluasi macro-F1 → demo web.
+        </p>
+      </div>
+      <aside class="hero-side" aria-label="Ringkasan model">
+        <div class="stamp">Benchmark 2019<br />diuji ulang 2026</div>
+        <div class="specs">
+          <div class="specs-row"><span>Model final</span><strong id="metric-model">—</strong></div>
+          <div class="specs-row"><span>Macro-F1</span><strong id="metric-f1">—</strong></div>
+          <div class="specs-row"><span>Akurasi</span><strong id="metric-acc">—</strong></div>
+          <div class="specs-row"><span>Data uji</span><strong id="metric-test">—</strong></div>
+        </div>
+      </aside>
+    </section>
+
+    <main class="workbench">
+      <section class="panel" aria-labelledby="input-title">
+        <div class="panel-head">
+          <span class="num">02</span>
+          <h2 id="input-title">Input teks</h2>
+          <span class="panel-tag">maks 2000 char</span>
+        </div>
+        <div class="panel-body">
+          <label class="field-label" for="text-input">Tempel komentar / tweet / caption</label>
+          <textarea id="text-input" maxlength="2000" placeholder="Tulis atau tempel teks di sini..."></textarea>
+          <div class="input-meta">
+            <span>Ctrl + Enter untuk analisis</span>
+            <span id="char-count">0 / 2000</span>
+          </div>
+
+          <div class="actions">
+            <button class="primary" id="analyze-btn" type="button">Analisis teks →</button>
+            <button id="clear-btn" type="button">Bersihkan</button>
+          </div>
+
+          <div class="samples">
+            <div class="samples-label">Muat contoh · mengandung bahasa kasar</div>
+            <button class="sample" type="button" data-sample="normal">Normal</button>
+            <button class="sample" type="button" data-sample="abusive">Abusive</button>
+            <button class="sample" type="button" data-sample="hate">Hate speech</button>
+          </div>
+
+          <div id="error-box" class="error" role="alert" hidden></div>
+        </div>
+      </section>
+
+      <section class="panel result-panel" aria-labelledby="result-title" aria-live="polite">
+        <div class="panel-head">
+          <span class="num">03</span>
+          <h2 id="result-title">Hasil analisis</h2>
+          <span class="panel-tag">live inference</span>
+        </div>
+        <div class="panel-body">
+          <div id="result-content">
+            <div class="placeholder">
+              <div>
+                <div class="glyph" aria-hidden="true">?</div>
+                <p>Masukkan teks, lalu tekan tombol analisis. Hasil muncul di sini.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <section class="metrics" aria-label="Metrik performa">
+      <div class="metric">
+        <div class="k">Macro-F1 / test</div>
+        <div class="v" id="strip-f1">—</div>
+      </div>
+      <div class="metric">
+        <div class="k">Akurasi / test</div>
+        <div class="v" id="strip-acc">—</div>
+      </div>
+      <div class="metric">
+        <div class="k">Model terpilih</div>
+        <div class="v" id="strip-model">—</div>
+      </div>
+      <div class="metric">
+        <div class="k">Ukuran data uji</div>
+        <div class="v" id="strip-test">—</div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <div class="footer-inner">
+      <div>
+        Sumber data: Ibrohim &amp; Budi (2019), <em>Multi-label Hate Speech and Abusive Language Detection in Indonesian Twitter</em>.<br />
+        Lisensi CC BY-NC-SA 4.0 · Demo akademik, bukan alat moderasi produksi.
+      </div>
+      <div>
+        <div class="barcode" aria-hidden="true">
+          <span style="height:100%"></span><span style="height:60%"></span><span style="height:85%"></span><span style="height:100%"></span><span style="height:45%"></span><span style="height:75%"></span><span style="height:100%"></span><span style="height:55%"></span><span style="height:90%"></span><span style="height:100%"></span><span style="height:40%"></span><span style="height:80%"></span><span style="height:100%"></span><span style="height:65%"></span><span style="height:95%"></span><span style="height:50%"></span><span style="height:85%"></span><span style="height:100%"></span>
+        </div>
+        <a href="/docs" target="_blank" rel="noreferrer">API docs ↗</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const SAMPLES = {
+      normal: "Saya suka sekali makanan di warung ini, harganya murah dan rasanya enak.",
+      abusive: "Anjir, gua lupa bawa dompet.",
+      hate: "Dasar cebong munafik, kalian semua harus pergi."
+    };
+
+    const LABEL_ORDER = ["Normal", "Abusive", "Hate Speech"];
+    const LABEL_CLASS = { "Normal": "normal", "Abusive": "abusive", "Hate Speech": "hate" };
+
+    const input = document.getElementById("text-input");
+    const charCount = document.getElementById("char-count");
+    const analyzeBtn = document.getElementById("analyze-btn");
+    const clearBtn = document.getElementById("clear-btn");
+    const errorBox = document.getElementById("error-box");
+    const resultContent = document.getElementById("result-content");
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[char]));
+    }
+
+    function updateCount() {
+      charCount.textContent = `${input.value.length} / 2000`;
+    }
+
+    function setText(key) {
+      input.value = SAMPLES[key] || "";
+      updateCount();
+      input.focus();
+    }
+
+    function showError(message) {
+      errorBox.textContent = message;
+      errorBox.hidden = false;
+    }
+
+    function clearError() {
+      errorBox.hidden = true;
+      errorBox.textContent = "";
+    }
+
+    function renderResult(data) {
+      const labelClass = LABEL_CLASS[data.label] || "normal";
+      const probabilityRows = LABEL_ORDER.map((label) => {
+        const value = Number(data.probabilities[label] || 0);
+        const cls = LABEL_CLASS[label] || "normal";
+        return `
+          <div class="bar-row">
+            <span class="name">${escapeHtml(label)}</span>
+            <span class="track"><span class="fill ${cls}" style="width:${(value * 100).toFixed(1)}%"></span></span>
+            <span class="pct">${(value * 100).toFixed(1)}%</span>
+          </div>`;
+      }).join("");
+
+      const tokenChips = (items, cls) => items.length
+        ? items.map((item) => `<span class="chip ${cls}">${escapeHtml(item.token)} <small>${item.weight > 0 ? "+" : ""}${item.weight.toFixed(3)}</small></span>`).join("")
+        : `<span class="chip">tidak ada token dominan</span>`;
+
+      resultContent.innerHTML = `
+        <div class="result-top">
+          <span class="verdict ${labelClass}">${escapeHtml(data.label)}</span>
+          <span class="confidence">Keyakinan<strong>${(data.confidence * 100).toFixed(1)}%</strong></span>
+        </div>
+        <div class="bars">${probabilityRows}</div>
+        <div class="tokens">
+          <h3>Mendorong prediksi ↑</h3>
+          <div class="chips">${tokenChips(data.supporting_tokens, "pos")}</div>
+        </div>
+        <div class="tokens">
+          <h3>Menahan prediksi ↓</h3>
+          <div class="chips">${tokenChips(data.opposing_tokens, "neg")}</div>
+        </div>
+        <details>
+          <summary>Lihat teks setelah praproses</summary>
+          <code>${escapeHtml(data.cleaned_text || "-")}</code>
+        </details>
+      `;
+    }
+
+    async function analyze() {
+      const text = input.value.trim();
+      clearError();
+      if (!text) {
+        showError("Teks masih kosong. Masukkan kalimat terlebih dahulu.");
+        input.focus();
+        return;
+      }
+
+      analyzeBtn.disabled = true;
+      const originalLabel = analyzeBtn.textContent;
+      analyzeBtn.textContent = "Menganalisis...";
+      try {
+        const response = await fetch("/api/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text })
+        });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.detail || `Server mengembalikan ${response.status}`);
+        }
+        renderResult(await response.json());
+      } catch (error) {
+        showError(error.message || "Gagal menghubungi server.");
+      } finally {
+        analyzeBtn.disabled = false;
+        analyzeBtn.textContent = originalLabel;
+      }
+    }
+
+    function setMetric(id, value) {
+      const element = document.getElementById(id);
+      if (element && value != null) element.textContent = value;
+    }
+
+    async function loadModelInfo() {
+      try {
+        const response = await fetch("/api/model-info");
+        if (!response.ok) return;
+        const info = await response.json();
+        const f1 = info.macro_f1 != null ? Number(info.macro_f1).toFixed(4) : "—";
+        const acc = info.accuracy != null ? `${(Number(info.accuracy) * 100).toFixed(2)}%` : "—";
+        const model = (info.model || "—").toUpperCase();
+        const testSize = info.test_size ? `${info.test_size.toLocaleString("id-ID")} teks` : "—";
+        setMetric("metric-f1", f1);
+        setMetric("metric-acc", acc);
+        setMetric("metric-model", model);
+        setMetric("metric-test", testSize);
+        setMetric("strip-f1", f1);
+        setMetric("strip-acc", acc);
+        setMetric("strip-model", model);
+        setMetric("strip-test", testSize);
+      } catch (_) {
+        /* metrik opsional */
+      }
+    }
+
+    document.querySelectorAll("[data-sample]").forEach((button) => {
+      button.addEventListener("click", () => setText(button.dataset.sample));
+    });
+    input.addEventListener("input", updateCount);
+    input.addEventListener("keydown", (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") analyze();
+    });
+    analyzeBtn.addEventListener("click", analyze);
+    clearBtn.addEventListener("click", () => {
+      input.value = "";
+      updateCount();
+      clearError();
+      input.focus();
+    });
+
+    updateCount();
+    loadModelInfo();
+
+    // Mode screenshot: /?demo=hate|abusive|normal otomatis menganalisis.
+    const demoKey = new URLSearchParams(window.location.search).get("demo");
+    if (demoKey) {
+      const key = SAMPLES[demoKey] ? demoKey : "hate";
+      setText(key);
+      setTimeout(analyze, 450);
+    }
+  </script>
+</body>
+</html>

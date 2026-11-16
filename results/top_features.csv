@@ -1,0 +1,61 @@
+model,class,rank,feature,weight
+svm,Normal,1,bom,1.180726
+svm,Normal,2,budaya,0.944108
+svm,Normal,3,kunti,0.777125
+svm,Normal,4,presiden jokowi,0.775251
+svm,Normal,5,sipit,0.760433
+svm,Normal,6,katolik,0.721241
+svm,Normal,7,ekonomi,0.707628
+svm,Normal,8,bisu,0.672665
+svm,Normal,9,dan,0.645788
+svm,Normal,10,pilihan,0.594062
+svm,Normal,11,buaya,0.540622
+svm,Normal,12,dalam,0.52778
+svm,Normal,13,pilihan kepala,0.519323
+svm,Normal,14,asing,0.482881
+svm,Normal,15,yahudi,0.442808
+svm,Normal,16,tentu,0.440749
+svm,Normal,17,tahun,0.421172
+svm,Normal,18,buta,0.408976
+svm,Normal,19,kristen,0.407992
+svm,Normal,20,anti asing,0.400537
+svm,Abusive,1,edan,1.294488
+svm,Abusive,2,titit,1.17892
+svm,Abusive,3,memek,1.134477
+svm,Abusive,4,anjir,1.083545
+svm,Abusive,5,silit,1.051681
+svm,Abusive,6,nete,0.901686
+svm,Abusive,7,kontol,0.887238
+svm,Abusive,8,gembel,0.879855
+svm,Abusive,9,kunyuk,0.719528
+svm,Abusive,10,ngentot,0.698777
+svm,Abusive,11,banci,0.683177
+svm,Abusive,12,gue,0.654579
+svm,Abusive,13,perek,0.609114
+svm,Abusive,14,bodoh,0.605197
+svm,Abusive,15,sinting,0.604337
+svm,Abusive,16,manusia homo,0.591029
+svm,Abusive,17,setan,0.581405
+svm,Abusive,18,aku,0.559913
+svm,Abusive,19,dasar cebong,0.556297
+svm,Abusive,20,tai,0.543406
+svm,Hate Speech,1,cebong,1.383532
+svm,Hate Speech,2,ganti presiden,1.328279
+svm,Hate Speech,3,ahok,1.100658
+svm,Hate Speech,4,kamu,1.003554
+svm,Hate Speech,5,dasar,1.003379
+svm,Hate Speech,6,ganti,0.953782
+svm,Hate Speech,7,tolol,0.941383
+svm,Hate Speech,8,prabowo,0.890667
+svm,Hate Speech,9,bubarkan,0.880179
+svm,Hate Speech,10,usir,0.86841
+svm,Hate Speech,11,dungu,0.772734
+svm,Hate Speech,12,lengserkan,0.771955
+svm,Hate Speech,13,picek,0.770369
+svm,Hate Speech,14,jokowi,0.708821
+svm,Hate Speech,15,bego,0.664894
+svm,Hate Speech,16,sih,0.661738
+svm,Hate Speech,17,sandi,0.659466
+svm,Hate Speech,18,anies sandi,0.623718
+svm,Hate Speech,19,mundur,0.623627
+svm,Hate Speech,20,bani,0.621845

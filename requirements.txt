@@ -1,0 +1,9 @@
+# Dependensi runtime untuk Vercel / inference.
+# Versi dipin agar model .joblib (dipickle dengan scikit-learn 1.9.0) aman.
+# Untuk training, EDA, dan build laporan, pasang requirements-dev.txt.
+fastapi==0.109.0
+pydantic==2.13.4
+scikit-learn==1.9.0
+scipy==1.17.1
+numpy==2.4.6
+joblib==1.5.3
