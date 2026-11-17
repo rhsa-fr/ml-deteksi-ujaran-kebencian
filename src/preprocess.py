@@ -39,6 +39,61 @@ REPEATED_CHAR_RE = re.compile(r"(.)\1{2,}")
 NON_LETTER_RE = re.compile(r"[^a-z\s]")
 MULTISPACE_RE = re.compile(r"\s+")
 
+# Nama tokoh politik yang dinetralkan dari teks. Pada dataset 2019, nama-nama
+# ini menjadi proksi kubu politik (cebong/kampret) sehingga model menghafalnya
+# sebagai sinyal kebencian: "Jokowi" saja bisa memicu Hate Speech 87%.
+# Menghapusnya memaksa model bersandar pada kata yang benar-benar menyerang.
+# Yang dinetralkan hanya nama orang, bukan nama kelompok atau ideologi.
+POLITICAL_ENTITIES = (
+    "joko widodo",
+    "prabowo subianto",
+    "basuki tjahaja purnama",
+    "anies baswedan",
+    "sandiaga uno",
+    "megawati soekarnoputri",
+    "abdurrahman wahid",
+    "susilo bambang yudhoyono",
+    "ridwan kamil",
+    "puan maharani",
+    "agus harimurti",
+    "fadli zon",
+    "rocky gerung",
+    "ma ruf amin",
+    "maruf amin",
+    "mahfud md",
+    "ganjar pranowo",
+    "airlangga hartarto",
+    "erick thohir",
+    "luhut pandjaitan",
+    "rizieq shihab",
+    "ratna sarumpaet",
+    "najwa shihab",
+    "denny siregar",
+    "setya novanto",
+    "budi gunawan",
+    "sri mulyani",
+    "rini soemarno",
+    "jokowi",
+    "prabowo",
+    "ahok",
+    "anies",
+    "sandiaga",
+    "megawati",
+    "gus dur",
+    "sby",
+    "ganjar",
+    "mahfud",
+    "airlangga",
+    "luhut",
+    "rizieq",
+    "setnov",
+)
+
+# Alternatif terpanjang didahulukan agar "joko widodo" tidak tersisa "joko".
+ENTITY_RE = re.compile(
+    r"\b(?:" + "|".join(sorted(POLITICAL_ENTITIES, key=len, reverse=True)) + r")\b"
+)
+
 
 def load_raw_dataset(path: Path | None = None) -> pd.DataFrame:
     """Baca dataset mentah dan petakan label menjadi tiga kelas."""
@@ -109,8 +164,13 @@ def load_slang_map(path: Path | None = None) -> dict[str, str]:
     return mapping
 
 
+def neutralize_entities(text: str) -> str:
+    """Buang nama tokoh politik dari teks yang sudah dibersihkan."""
+    return MULTISPACE_RE.sub(" ", ENTITY_RE.sub(" ", text)).strip()
+
+
 def basic_clean(text: str) -> str:
-    """Bersihkan teks tanpa stemming."""
+    """Bersihkan teks tanpa stemming, lalu netralkan nama tokoh politik."""
     text = text.lower()
     text = USER_URL_TOKEN_RE.sub(" ", text)
     text = URL_RE.sub(" ", text)
@@ -120,7 +180,7 @@ def basic_clean(text: str) -> str:
     text = REPEATED_CHAR_RE.sub(r"\1", text)
     text = NON_LETTER_RE.sub(" ", text)
     text = MULTISPACE_RE.sub(" ", text).strip()
-    return text
+    return neutralize_entities(text)
 
 
 def normalize_slang(text: str, slang_map: dict[str, str]) -> str:

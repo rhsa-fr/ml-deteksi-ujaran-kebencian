@@ -3,135 +3,135 @@
   "support_hate": 542,
   "support_non_hate": 741,
   "argmax_baseline": {
-    "precision": 0.8528,
-    "recall": 0.8229,
-    "f1": 0.8376
+    "precision": 0.8723,
+    "recall": 0.8192,
+    "f1": 0.8449
   },
   "best_f1_threshold": {
     "threshold": 0.35,
-    "precision": 0.8033,
-    "recall": 0.8893,
-    "f1": 0.8441
+    "precision": 0.8131,
+    "recall": 0.8911,
+    "f1": 0.8504
   },
   "tabel": [
     {
       "threshold": 0.2,
-      "precision": 0.5822,
-      "recall": 0.9797,
-      "f1": 0.7304,
-      "flagged": 912,
+      "precision": 0.5916,
+      "recall": 0.9834,
+      "f1": 0.7387,
+      "flagged": 901,
       "support_hate": 542
     },
     {
       "threshold": 0.25,
-      "precision": 0.6603,
-      "recall": 0.9576,
-      "f1": 0.7816,
-      "flagged": 786,
+      "precision": 0.6761,
+      "recall": 0.9705,
+      "f1": 0.797,
+      "flagged": 778,
       "support_hate": 542
     },
     {
       "threshold": 0.3,
-      "precision": 0.7277,
-      "recall": 0.9317,
-      "f1": 0.8172,
-      "flagged": 694,
+      "precision": 0.7493,
+      "recall": 0.9373,
+      "f1": 0.8328,
+      "flagged": 678,
       "support_hate": 542
     },
     {
       "threshold": 0.35,
-      "precision": 0.8033,
-      "recall": 0.8893,
-      "f1": 0.8441,
-      "flagged": 600,
+      "precision": 0.8131,
+      "recall": 0.8911,
+      "f1": 0.8504,
+      "flagged": 594,
       "support_hate": 542
     },
     {
       "threshold": 0.4,
-      "precision": 0.8387,
-      "recall": 0.8155,
-      "f1": 0.8269,
-      "flagged": 527,
+      "precision": 0.8699,
+      "recall": 0.8266,
+      "f1": 0.8477,
+      "flagged": 515,
       "support_hate": 542
     },
     {
       "threshold": 0.45,
-      "precision": 0.887,
-      "recall": 0.7528,
-      "f1": 0.8144,
-      "flagged": 460,
+      "precision": 0.8958,
+      "recall": 0.7454,
+      "f1": 0.8137,
+      "flagged": 451,
       "support_hate": 542
     },
     {
       "threshold": 0.5,
-      "precision": 0.9002,
-      "recall": 0.6827,
-      "f1": 0.7765,
-      "flagged": 411,
+      "precision": 0.9179,
+      "recall": 0.6808,
+      "f1": 0.7818,
+      "flagged": 402,
       "support_hate": 542
     },
     {
       "threshold": 0.55,
-      "precision": 0.9296,
-      "recall": 0.5849,
-      "f1": 0.718,
-      "flagged": 341,
+      "precision": 0.9382,
+      "recall": 0.5886,
+      "f1": 0.7234,
+      "flagged": 340,
       "support_hate": 542
     },
     {
       "threshold": 0.6,
-      "precision": 0.9433,
-      "recall": 0.4908,
-      "f1": 0.6456,
-      "flagged": 282,
+      "precision": 0.9435,
+      "recall": 0.4926,
+      "f1": 0.6473,
+      "flagged": 283,
       "support_hate": 542
     },
     {
       "threshold": 0.65,
-      "precision": 0.9633,
-      "recall": 0.3875,
-      "f1": 0.5526,
-      "flagged": 218,
+      "precision": 0.9595,
+      "recall": 0.393,
+      "f1": 0.5576,
+      "flagged": 222,
       "support_hate": 542
     },
     {
       "threshold": 0.7,
-      "precision": 0.9661,
-      "recall": 0.3155,
-      "f1": 0.4757,
+      "precision": 0.9718,
+      "recall": 0.3173,
+      "f1": 0.4784,
       "flagged": 177,
       "support_hate": 542
     },
     {
       "threshold": 0.75,
-      "precision": 0.9917,
-      "recall": 0.2196,
-      "f1": 0.3595,
-      "flagged": 120,
+      "precision": 0.9688,
+      "recall": 0.2288,
+      "f1": 0.3701,
+      "flagged": 128,
       "support_hate": 542
     },
     {
       "threshold": 0.8,
-      "precision": 0.9875,
-      "recall": 0.1458,
-      "f1": 0.254,
-      "flagged": 80,
+      "precision": 0.9759,
+      "recall": 0.1494,
+      "f1": 0.2592,
+      "flagged": 83,
       "support_hate": 542
     },
     {
       "threshold": 0.85,
-      "precision": 0.9792,
-      "recall": 0.0867,
-      "f1": 0.1593,
-      "flagged": 48,
+      "precision": 0.9512,
+      "recall": 0.072,
+      "f1": 0.1338,
+      "flagged": 41,
       "support_hate": 542
     },
     {
       "threshold": 0.9,
       "precision": 1.0,
-      "recall": 0.0443,
-      "f1": 0.0848,
-      "flagged": 24,
+      "recall": 0.0314,
+      "f1": 0.0608,
+      "flagged": 17,
       "support_hate": 542
     }
   ]

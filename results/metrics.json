@@ -1,38 +1,37 @@
 {
-  "generated_at": "2026-11-16T20:38:09",
-  "environment": {
-    "python": "3.11.9",
-    "scikit_learn": "1.9.0",
-    "pandas": "3.0.5",
-    "numpy": "2.4.6"
+  "label_scheme": "binary",
+  "label_mapping": {
+    "Normal": "Normal",
+    "Abusive": "Kebencian/Abusif",
+    "Hate Speech": "Kebencian/Abusif"
   },
   "dataset": {
     "jumlah_baris_mentah": 13169,
-    "jumlah_baris_setelah_dedup": 12828,
-    "jumlah_duplikat_dibuang": 341,
+    "jumlah_baris_setelah_dedup": 12822,
+    "jumlah_duplikat_dibuang": 347,
     "distribusi_kelas": {
-      "Normal": 5701,
+      "Normal": 5697,
       "Abusive": 1709,
-      "Hate Speech": 5418
+      "Hate Speech": 5416
     },
     "persentase_kelas": {
-      "Normal": 44.44,
-      "Abusive": 13.32,
+      "Normal": 44.43,
+      "Abusive": 13.33,
       "Hate Speech": 42.24
     },
     "panjang_karakter": {
       "min": 3,
-      "median": 96.0,
-      "mean": 111.68,
+      "median": 95.0,
+      "mean": 110.34,
       "max": 501
     },
     "panjang_kata": {
       "min": 1,
-      "median": 16.0,
-      "mean": 18.09,
+      "median": 15.0,
+      "mean": 17.9,
       "max": 143
     },
-    "jumlah_kosakata_unik": 19155,
+    "jumlah_kosakata_unik": 19147,
     "contoh_per_kelas": {
       "Normal": [
         "kadang aku berpikir kenapa aku tetap percaya pada tuhan padahal aku selalu jatuh berkali kali kadang aku merasa tuhan itu meninggalkan aku sendirian ketika orang tuaku berencana berpisah ketika kakakku lebih memilih jadi kristen ketika aku anak ter",
@@ -52,16 +51,16 @@
     }
   },
   "split": {
-    "train": 10262,
-    "validation": 1283,
+    "train": 10257,
+    "validation": 1282,
     "test": 1283,
-    "train_full": 11545
+    "random_state": 42
   },
   "tuning": {
     "best": {
-      "nb": 0.7697819973310986,
-      "lr": 0.8023290074542148,
-      "svm": 0.8055874415637173
+      "nb": 0.837887293212203,
+      "lr": 0.8609659482560544,
+      "svm": 0.8634767920094006
     },
     "trials": [
       {
@@ -69,349 +68,169 @@
         "params": {
           "alpha": 0.1
         },
-        "val_macro_f1": 0.769782
+        "val_macro_f1": 0.829997
       },
       {
         "model": "nb",
         "params": {
           "alpha": 0.5
         },
-        "val_macro_f1": 0.759685
+        "val_macro_f1": 0.837887
       },
       {
         "model": "nb",
         "params": {
           "alpha": 1.0
         },
-        "val_macro_f1": 0.73137
+        "val_macro_f1": 0.830676
       },
       {
         "model": "lr",
         "params": {
           "C": 0.5
         },
-        "val_macro_f1": 0.798981
+        "val_macro_f1": 0.847018
       },
       {
         "model": "lr",
         "params": {
           "C": 1.0
         },
-        "val_macro_f1": 0.802329
+        "val_macro_f1": 0.857933
       },
       {
         "model": "lr",
         "params": {
           "C": 5.0
         },
-        "val_macro_f1": 0.799813
+        "val_macro_f1": 0.860966
       },
       {
         "model": "svm",
         "params": {
           "C": 0.1
         },
-        "val_macro_f1": 0.805587
+        "val_macro_f1": 0.863477
       },
       {
         "model": "svm",
         "params": {
           "C": 0.5
         },
-        "val_macro_f1": 0.79966
+        "val_macro_f1": 0.859431
       },
       {
         "model": "svm",
         "params": {
           "C": 1.0
         },
-        "val_macro_f1": 0.788198
+        "val_macro_f1": 0.853758
       },
       {
         "model": "svm",
         "params": {
           "C": 2.0
         },
-        "val_macro_f1": 0.780889
+        "val_macro_f1": 0.849675
       }
     ]
   },
   "cross_validation": {
-    "model": "svm",
-    "params": {
-      "C": 0.1
-    },
-    "folds": 5,
-    "macro_f1_mean": 0.786158,
-    "macro_f1_std": 0.007781,
-    "scores": [
-      0.791755,
-      0.788061,
-      0.78491,
-      0.794138,
-      0.771926
-    ]
+    "mean_macro_f1": 0.863782,
+    "std_macro_f1": 0.007323,
+    "folds": 5
   },
-  "models": {
-    "nb": {
+  "comparison": [
+    {
+      "model": "nb",
       "params": {
-        "alpha": 0.1
+        "alpha": 0.5
       },
-      "val_macro_f1": 0.769782,
-      "test": {
-        "accuracy": 0.798909,
-        "macro_f1": 0.760112,
-        "weighted_f1": 0.801772,
-        "per_class": {
-          "Normal": {
-            "precision": 0.865314,
-            "recall": 0.822807,
-            "f1": 0.843525,
-            "support": 570
-          },
-          "Abusive": {
-            "precision": 0.570732,
-            "recall": 0.684211,
-            "f1": 0.62234,
-            "support": 171
-          },
-          "Hate Speech": {
-            "precision": 0.81903,
-            "recall": 0.809963,
-            "f1": 0.814471,
-            "support": 542
-          }
-        },
-        "classification_report": {
-          "Normal": {
-            "precision": 0.8653136531365314,
-            "recall": 0.8228070175438597,
-            "f1-score": 0.8435251798561151,
-            "support": 570.0
-          },
-          "Abusive": {
-            "precision": 0.5707317073170731,
-            "recall": 0.6842105263157895,
-            "f1-score": 0.6223404255319149,
-            "support": 171.0
-          },
-          "Hate Speech": {
-            "precision": 0.8190298507462687,
-            "recall": 0.8099630996309963,
-            "f1-score": 0.8144712430426716,
-            "support": 542.0
-          },
-          "accuracy": 0.798908807482463,
-          "macro avg": {
-            "precision": 0.7516917370666244,
-            "recall": 0.7723268811635485,
-            "f1-score": 0.7601122828102338,
-            "support": 1283.0
-          },
-          "weighted avg": {
-            "precision": 0.8064988958250351,
-            "recall": 0.798908807482463,
-            "f1-score": 0.8017716126368443,
-            "support": 1283.0
-          }
-        }
-      }
+      "val_macro_f1": 0.837887,
+      "test_accuracy": 0.860483,
+      "test_macro_f1": 0.857287,
+      "test_weighted_f1": 0.859668
     },
-    "lr": {
+    {
+      "model": "lr",
       "params": {
-        "C": 1.0
+        "C": 5.0
       },
-      "val_macro_f1": 0.802329,
-      "test": {
-        "accuracy": 0.819953,
-        "macro_f1": 0.785885,
-        "weighted_f1": 0.821568,
-        "per_class": {
-          "Normal": {
-            "precision": 0.858377,
-            "recall": 0.87193,
-            "f1": 0.8651,
-            "support": 570
-          },
-          "Abusive": {
-            "precision": 0.62,
-            "recall": 0.725146,
-            "f1": 0.668464,
-            "support": 171
-          },
-          "Hate Speech": {
-            "precision": 0.855159,
-            "recall": 0.795203,
-            "f1": 0.824092,
-            "support": 542
-          }
-        },
-        "classification_report": {
-          "Normal": {
-            "precision": 0.8583765112262521,
-            "recall": 0.8719298245614036,
-            "f1-score": 0.8651000870322019,
-            "support": 570.0
-          },
-          "Abusive": {
-            "precision": 0.62,
-            "recall": 0.7251461988304093,
-            "f1-score": 0.6684636118598383,
-            "support": 171.0
-          },
-          "Hate Speech": {
-            "precision": 0.8551587301587301,
-            "recall": 0.7952029520295203,
-            "f1-score": 0.8240917782026769,
-            "support": 542.0
-          },
-          "accuracy": 0.8199532346063912,
-          "macro avg": {
-            "precision": 0.7778450804616607,
-            "recall": 0.7974263251404444,
-            "f1-score": 0.7858851590315723,
-            "support": 1283.0
-          },
-          "weighted avg": {
-            "precision": 0.8252460195985936,
-            "recall": 0.8199532346063912,
-            "f1-score": 0.8215682548887282,
-            "support": 1283.0
-          }
-        }
-      }
+      "val_macro_f1": 0.860966,
+      "test_accuracy": 0.886984,
+      "test_macro_f1": 0.885986,
+      "test_weighted_f1": 0.887175
     },
-    "svm": {
+    {
+      "model": "svm",
       "params": {
         "C": 0.1
       },
-      "val_macro_f1": 0.805587,
-      "test": {
-        "accuracy": 0.837101,
-        "macro_f1": 0.807526,
-        "weighted_f1": 0.836526,
-        "per_class": {
-          "Normal": {
-            "precision": 0.855219,
-            "recall": 0.891228,
-            "f1": 0.872852,
-            "support": 570
-          },
-          "Abusive": {
-            "precision": 0.722892,
-            "recall": 0.701754,
-            "f1": 0.712166,
-            "support": 171
-          },
-          "Hate Speech": {
-            "precision": 0.852772,
-            "recall": 0.822878,
-            "f1": 0.837559,
-            "support": 542
-          }
-        },
-        "classification_report": {
-          "Normal": {
-            "precision": 0.8552188552188552,
-            "recall": 0.8912280701754386,
-            "f1-score": 0.872852233676976,
-            "support": 570.0
-          },
-          "Abusive": {
-            "precision": 0.7228915662650602,
-            "recall": 0.7017543859649122,
-            "f1-score": 0.712166172106825,
-            "support": 171.0
-          },
-          "Hate Speech": {
-            "precision": 0.8527724665391969,
-            "recall": 0.8228782287822878,
-            "f1-score": 0.8375586854460094,
-            "support": 542.0
-          },
-          "accuracy": 0.8371005455962588,
-          "macro avg": {
-            "precision": 0.8102942960077041,
-            "recall": 0.805286894974213,
-            "f1-score": 0.8075256970766035,
-            "support": 1283.0
-          },
-          "weighted avg": {
-            "precision": 0.8365486221124844,
-            "recall": 0.8371005455962588,
-            "f1-score": 0.8365261076678725,
-            "support": 1283.0
-          }
-        }
-      }
+      "val_macro_f1": 0.863477,
+      "test_accuracy": 0.890101,
+      "test_macro_f1": 0.889288,
+      "test_weighted_f1": 0.890345
     }
-  },
+  ],
   "best_model": "svm",
-  "selected_on": "validation_macro_f1",
+  "selected_on": "validation macro-F1",
   "use_stemming": false,
   "best_metrics": {
-    "accuracy": 0.837101,
-    "macro_f1": 0.807526,
-    "weighted_f1": 0.836526,
+    "accuracy": 0.890101,
+    "macro_f1": 0.889288,
+    "weighted_f1": 0.890345,
     "per_class": {
       "Normal": {
-        "precision": 0.855219,
-        "recall": 0.891228,
-        "f1": 0.872852,
+        "precision": 0.855721,
+        "recall": 0.905263,
+        "f1": 0.879795,
         "support": 570
       },
-      "Abusive": {
-        "precision": 0.722892,
-        "recall": 0.701754,
-        "f1": 0.712166,
-        "support": 171
-      },
-      "Hate Speech": {
-        "precision": 0.852772,
-        "recall": 0.822878,
-        "f1": 0.837559,
-        "support": 542
+      "Kebencian/Abusif": {
+        "precision": 0.920588,
+        "recall": 0.87798,
+        "f1": 0.89878,
+        "support": 713
       }
     },
     "classification_report": {
       "Normal": {
-        "precision": 0.8552188552188552,
-        "recall": 0.8912280701754386,
-        "f1-score": 0.872852233676976,
+        "precision": 0.8557213930348259,
+        "recall": 0.9052631578947369,
+        "f1-score": 0.8797953964194374,
         "support": 570.0
       },
-      "Abusive": {
-        "precision": 0.7228915662650602,
-        "recall": 0.7017543859649122,
-        "f1-score": 0.712166172106825,
-        "support": 171.0
+      "Kebencian/Abusif": {
+        "precision": 0.9205882352941176,
+        "recall": 0.8779803646563815,
+        "f1-score": 0.8987796123474515,
+        "support": 713.0
       },
-      "Hate Speech": {
-        "precision": 0.8527724665391969,
-        "recall": 0.8228782287822878,
-        "f1-score": 0.8375586854460094,
-        "support": 542.0
-      },
-      "accuracy": 0.8371005455962588,
+      "accuracy": 0.8901013250194856,
       "macro avg": {
-        "precision": 0.8102942960077041,
-        "recall": 0.805286894974213,
-        "f1-score": 0.8075256970766035,
+        "precision": 0.8881548141644717,
+        "recall": 0.8916217612755593,
+        "f1-score": 0.8892875043834445,
         "support": 1283.0
       },
       "weighted avg": {
-        "precision": 0.8365486221124844,
-        "recall": 0.8371005455962588,
-        "f1-score": 0.8365261076678725,
+        "precision": 0.8917697628952117,
+        "recall": 0.8901013250194856,
+        "f1-score": 0.890345471210298,
         "support": 1283.0
       }
     }
   },
   "label_order": [
     "Normal",
-    "Abusive",
-    "Hate Speech"
+    "Kebencian/Abusif"
   ],
   "test_size": 1283,
-  "misclassified": 209
+  "misclassified": 141,
+  "probe_2026": {
+    "n": 24,
+    "accuracy": 0.8333,
+    "correct": 20,
+    "note": "Probe manual bergaya 2026, bukan test set resmi."
+  }
 }

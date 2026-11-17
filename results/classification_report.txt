@@ -1,9 +1,8 @@
-              precision    recall  f1-score   support
+                  precision    recall  f1-score   support
 
-      Normal     0.8552    0.8912    0.8729       570
-     Abusive     0.7229    0.7018    0.7122       171
- Hate Speech     0.8528    0.8229    0.8376       542
+          Normal     0.8557    0.9053    0.8798       570
+Kebencian/Abusif     0.9206    0.8780    0.8988       713
 
-    accuracy                         0.8371      1283
-   macro avg     0.8103    0.8053    0.8075      1283
-weighted avg     0.8365    0.8371    0.8365      1283
+        accuracy                         0.8901      1283
+       macro avg     0.8882    0.8916    0.8893      1283
+    weighted avg     0.8918    0.8901    0.8903      1283

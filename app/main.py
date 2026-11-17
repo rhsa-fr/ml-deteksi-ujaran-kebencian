@@ -71,8 +71,8 @@ except Exception as exc:  # pragma: no cover
 
 app = FastAPI(
     title="Deteksi Ujaran Kebencian Bahasa Indonesia",
-    description="Demo klasifikasi teks: Normal, Abusive, Hate Speech.",
-    version="1.0.0",
+    description="Demo klasifikasi teks biner: Normal vs Kebencian/Abusif.",
+    version="2.0.0",
 )
 
 

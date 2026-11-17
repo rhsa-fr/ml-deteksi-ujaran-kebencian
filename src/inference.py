@@ -27,7 +27,12 @@ def _class_scores(pipeline: Pipeline, features) -> np.ndarray:
     classifier = pipeline.named_steps["clf"]
     if hasattr(classifier, "predict_proba"):
         return classifier.predict_proba(features)[0]
-    return _softmax(classifier.decision_function(features))[0]
+    decision = np.atleast_2d(classifier.decision_function(features))
+    if decision.shape[1] == 1:
+        # Klasifikasi biner: LinearSVC memberi satu margin, bukan satu skor
+        # per kelas. Ubah menjadi [-margin, +margin] agar sejajar classes_.
+        decision = np.hstack([-decision, decision])
+    return _softmax(decision)[0]
 
 
 def _word_feature_names(pipeline: Pipeline) -> list[str]:
@@ -47,7 +52,8 @@ def _contributions(
     if hasattr(classifier, "coef_"):
         coefficients = classifier.coef_
         if coefficients.shape[0] == 1:
-            weights = coefficients[0]
+            # Biner: koefisien tunggal menunjuk ke kelas kedua.
+            weights = coefficients[0] if predicted_index == 1 else -coefficients[0]
         else:
             weights = coefficients[predicted_index]
         contributions = features.toarray()[0][:n_words] * weights[:n_words]

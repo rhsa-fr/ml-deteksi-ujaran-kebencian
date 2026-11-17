@@ -17,9 +17,9 @@
 
 ## Abstrak
 
-Ujaran kebencian dan bahasa abusif di media sosial menimbulkan dampak sosial yang nyata, tetapi moderasi manual tidak lagi mampu mengikuti volume percakapan. Penelitian ini membangun pipeline klasifikasi teks bahasa Indonesia tiga kelas — Normal, Abusive, dan Hate Speech — dengan memanfaatkan 13.169 tweet dari dataset Ibrohim dan Budi (2019). Setelah deduplikasi, 12.828 teks diproses melalui pembersihan karakter, normalisasi slang dengan kamus 15.151 entri, dan pembaruan istilah 2026. Representasi teks menggunakan TF-IDF gabungan word 1–2 gram dan char_wb 3–5 gram, kemudian dibandingkan tiga model: Multinomial Naive Bayes, Regresi Logistik, dan Linear SVM. Pemilihan hyperparameter dilakukan pada validation set, sedangkan test set hanya digunakan sekali untuk evaluasi akhir. Linear SVM dengan C = 0,1 memberikan hasil terbaik dengan akurasi 83,71% dan macro-F1 0,8075; Regresi Logistik mencapai macro-F1 0,7859 dan Naive Bayes 0,7601. Kelas Abusive menjadi kelas tersulit dengan F1 0,7122 karena batasnya sering tumpang tindih dengan Hate Speech dan Normal. Hasil ini menunjukkan bahwa pipeline klasik yang sederhana, dengan praproses yang tepat dan evaluasi yang jujur, sudah mampu menjadi baseline yang kuat sebelum model transformer yang lebih mahal.
+Ujaran kebencian dan bahasa abusif di media sosial menimbulkan dampak sosial yang nyata, tetapi moderasi manual tidak lagi mampu mengikuti volume percakapan. Penelitian ini membangun pipeline klasifikasi teks bahasa Indonesia dan membandingkan tiga model klasik — Multinomial Naive Bayes, Regresi Logistik, dan Linear SVM — pada 13.169 tweet dataset Ibrohim dan Budi (2019). Setelah deduplikasi, 12.822 teks diproses melalui pembersihan karakter, normalisasi slang dengan kamus 15.151 entri, dan netralisasi nama tokoh politik. Representasi teks menggunakan TF-IDF gabungan word 1–2 gram dan char_wb 3–5 gram. Pemilihan hyperparameter dilakukan pada validation set, sedangkan test set hanya dipakai sekali. Pada skema tiga kelas (Normal, Abusive, Hate Speech), Linear SVM dengan C = 0,1 memberi hasil terbaik: akurasi 84,57% dan macro-F1 0,8181, dengan kelas Abusive sebagai yang tersulit (F1 0,7294). Untuk menguji daya generalisasi, model diuji pada 24 kalimat bergaya 2026: akurasi turun ke 58,3%, dan 7 dari 8 hinaan langsung salah diklasifikasi sebagai Hate Speech. Penelusuran label menunjukkan penyebabnya bukan arsitektur model — 64,7% teks yang mengandung kata hinaan memang dilabeli Hate Speech, dan bahkan classifier khusus Abusive vs Hate Speech hanya mengenali 2 dari 8 hinaan. Karena batas antar-kelas tidak konsisten di data, skema final disederhanakan menjadi biner Normal vs Kebencian/Abusif, yang mencapai akurasi 89,01% dan macro-F1 0,8893 pada test set serta 83,3% pada uji 2026. Hasil ini menunjukkan bahwa kualitas definisi label membatasi performa lebih kuat daripada pilihan algoritma.
 
-**Kata kunci:** ujaran kebencian, bahasa Indonesia, TF-IDF, Naive Bayes, SVM, klasifikasi teks
+**Kata kunci:** ujaran kebencian, bahasa Indonesia, TF-IDF, Naive Bayes, SVM, generalisasi lintas waktu
 
 ---
 
@@ -36,7 +36,7 @@ Penelitian ini tidak hanya melatih satu model, tetapi membandingkan tiga model k
 ### 1.2 Rumusan masalah
 
 1. Bagaimana membangun pipeline praproses yang sesuai untuk teks media sosial bahasa Indonesia yang mengandung slang, typo, dan kata berulang?
-2. Seberapa baik TF-IDF dengan word dan char n-gram merepresentasikan teks untuk tugas klasifikasi tiga kelas?
+2. Seberapa baik TF-IDF dengan word dan char n-gram merepresentasikan teks untuk tugas klasifikasi ujaran kebencian?
 3. Model mana di antara Multinomial Naive Bayes, Regresi Logistik, dan Linear SVM yang memberikan performa terbaik pada data uji, dan mengapa?
 4. Kesalahan seperti apa yang masih dilakukan model, terutama pada kelas Abusive yang jumlahnya lebih sedikit?
 
@@ -53,7 +53,7 @@ Bagi peneliti, penelitian ini menyediakan baseline dan analisis kesalahan yang d
 
 ### 1.5 Batasan
 
-Penelitian ini dibatasi pada teks berbahasa Indonesia, tiga kelas, dan data dari Twitter 2018–2019. Model tidak dirancang untuk video, audio, atau percakapan multi-turn. Keputusan model tidak dimaksudkan sebagai putusan final, melainkan sebagai sinyal awal yang harus ditinjau manusia.
+Penelitian ini dibatasi pada teks berbahasa Indonesia, skema tiga kelas dengan pembanding biner, dan data dari Twitter 2018–2019. Model tidak dirancang untuk video, audio, atau percakapan multi-turn. Keputusan model tidak dimaksudkan sebagai putusan final, melainkan sebagai sinyal awal yang harus ditinjau manusia.
 
 ---
 
@@ -184,9 +184,19 @@ def map_label(row):
     return "Normal"
 ```
 
-**Hasil.** Distribusi akhir: Normal 5.701 (44,44%), Abusive 1.709 (13,32%), Hate Speech 5.418 (42,24%).
+**Hasil.** Distribusi akhir: Normal 5.697 (44,43%), Abusive 1.709 (13,33%), Hate Speech 5.416 (42,24%). Setelah netralisasi nama tokoh politik, dua teks menjadi duplikat sehingga total berkurang dari 12.828 menjadi 12.822.
 
-**Analisis.** Pemetaan ini mengorbankan informasi target ujaran (agama, ras, gender) dan tingkat keparahan, tetapi menghasilkan kelas yang lebih seimbang dan cukup data per kelas. Kelas Abusive tetapMinoritas, sehingga `class_weight="balanced"` diterapkan pada Regresi Logistik dan SVM. Naive Bayes tidak memiliki parameter tersebut; ini salah satu keterbatasannya pada data tidak seimbang.
+**Analisis.** Pemetaan ini mengorbankan informasi target ujaran (agama, ras, gender) dan tingkat keparahan, tetapi menghasilkan kelas yang lebih seimbang dan cukup data per kelas. Kelas Abusive tetap minoritas, sehingga `class_weight="balanced"` diterapkan pada Regresi Logistik dan SVM. Naive Bayes tidak memiliki parameter tersebut; ini salah satu keterbatasannya pada data tidak seimbang.
+
+**Skema biner.** Selain skema tiga kelas di atas, penelitian ini juga melatih model biner yang menggabungkan Abusive dan Hate Speech menjadi satu kelas *Kebencian/Abusif*:
+
+```python
+if label == "Normal":
+    return "Normal"
+return "Kebencian/Abusif"
+```
+
+Skema biner tidak mengubah data maupun fitur; yang berubah hanya jumlah kelas keluaran. Alasannya dibahas pada Bab 4.8. Model biner inilah yang dipakai pada demo web, sedangkan model tiga kelas tetap dilaporkan sebagai studi pembanding.
 
 ### 3.4 Praproses
 
@@ -200,11 +210,12 @@ def map_label(row):
 4. Penggantian karakter berulang tiga kali atau lebih (`goblokkk` → `goblok`).
 5. Penghapusan karakter non-alfabet.
 6. Normalisasi slang memakai 15.151 entri, termasuk pembaruan 2026 seperti *rizz* → *pesona*, *flexing* → *pamer*, *mager* → *malas gerak*.
-7. Deduplikasi teks dan pembuangan teks yang terlalu pendek.
+7. Netralisasi nama tokoh politik: 42 nama (Jokowi, Prabowo, Ahok, Anies, Sandiaga, dan lain-lain) dibuang dari teks. Tanpa langkah ini, model menghafal nama sebagai proksi kubu politik: kata "Jokowi" saja menghasilkan skor Hate Speech 87,6%.
+8. Deduplikasi teks dan pembuangan teks yang terlalu pendek.
 
 Kata abusif sengaja dikecualikan dari normalisasi. Stopword juga tidak dihapus.
 
-**Hasil.** Panjang teks setelah praproses: median 16 kata (rata-rata 18,09; maksimum 143), median 96 karakter. Kosakata unik 19.155 kata. Contoh teks bersih:
+**Hasil.** Panjang teks setelah praproses: median 15 kata (rata-rata 17,9; maksimum 143), median 95 karakter. Kosakata unik 19.147 kata. Contoh teks bersih:
 
 - Normal: “kadang aku berpikir kenapa aku tetap percaya pada tuhan...”
 - Abusive: “siapa yang telat memberi tahu kamu edan sarap gue bergaul...”
@@ -224,9 +235,9 @@ Kata abusif sengaja dikecualikan dari normalisasi. Stopword juga tidak dihapus.
 
 Setelah konfigurasi terbaik ditemukan, model dilatih ulang pada train + validation dan dievaluasi pada test. Validasi silang 5-fold pada train dijalankan untuk model terpilih guna melihat stabilitas.
 
-**Hasil.** Konfigurasi terbaik di validation: NB \(\alpha=0,1\) (macro-F1 0,7698), LR \(C=1,0\) (0,8023), SVM \(C=0,1\) (0,8056). Validasi silang 5-fold SVM memberikan macro-F1 0,7862 ± 0,0078.
+**Hasil.** Konfigurasi terbaik di validation (skema tiga kelas): NB \(\alpha=0,5\) (macro-F1 0,7268), LR \(C=5,0\) (0,7444), SVM \(C=0,1\) (0,7490). Validasi silang 5-fold SVM memberikan macro-F1 0,7816 ± 0,0081. Pada skema biner, validation SVM naik menjadi 0,8635 dengan validasi silang 0,8638 ± 0,0073.
 
-**Analisis.** Selisih validation dan test yang kecil (0,8056 vs 0,8075) menunjukkan model tidak terlalu overfit. Ritme ini penting: jika test jauh lebih rendah dari validation, kemungkinan ada kebocoran data atau split yang tidak representatif. Karena test hanya dipakai sekali, angka 0,8075 dapat dipercaya sebagai estimasi performa pada distribusi data yang sama.
+**Analisis.** Skor validation lebih rendah daripada skor test karena validation dihitung pada model yang hanya dilatih dengan train (80%), sedangkan evaluasi test memakai model yang dilatih ulang dengan train + validation (90%). Selisih ini wajar dan bukan indikasi kebocoran. Yang penting adalah arah pemilihan model: SVM dipilih dari validation, bukan dari test, sehingga angka test tetap menjadi estimasi yang belum tersentuh optimasi. Karena test hanya dipakai sekali, angka 0,8181 (tiga kelas) dan 0,8893 (biner) dapat dipercaya sebagai estimasi pada distribusi data yang sama.
 
 ### 3.6 Ekstraksi fitur
 
@@ -258,9 +269,9 @@ features = FeatureUnion([("word", word), ("char", char)])
 
 **Implementasi.** Ketiga model dilatih dengan pipeline yang sama. LR dan SVM menggunakan `class_weight="balanced"`; NB menggunakan penghalusan \(\alpha\). Untuk demo, model terpilih adalah SVM; skor kelas dihitung dengan softmax dari `decision_function` karena SVM tidak menghasilkan probabilitas terkalibrasi.
 
-**Hasil.** Pada test set, SVM mencapai akurasi 83,71% dan macro-F1 0,8075; LR 82,00% dan 0,7859; NB 79,89% dan 0,7601.
+**Hasil.** Pada test set skema tiga kelas, SVM mencapai akurasi 84,57% dan macro-F1 0,8181; LR 84,96% dan 0,8189; NB 81,76% dan 0,7710. Pada skema biner yang dipakai demo, SVM mencapai akurasi 89,01% dan macro-F1 0,8893.
 
-**Analisis.** SVM unggul karena data teks berdimensi tinggi cenderung dapat dipisahkan secara linear, dan margin maksimum memberikan regularisasi alami. LR lebih mudah diprobabilistikkan dan diinterpretasi, tetapi sedikit kalah. NB paling cepat, tetapi asumsi independensinya tidak terpenuhi dan tidak memiliki mekanisme class weight, sehingga recall kelas Abusive lebih rendah.
+**Analisis.** SVM unggul pada validation set di kedua skema, meskipun pada test set tiga kelas LR sedikit lebih tinggi (0,8189 vs 0,8181). Karena pemilihan model dilakukan pada validation set dan bukan test set, SVM tetap dipilih. Selisih yang sangat tipis ini menunjukkan bahwa pada data teks berdimensi tinggi, LR dan SVM sering setara; yang membedakan lebih besar adalah skema label, bukan algoritma. NB paling cepat, tetapi asumsi independensinya tidak terpenuhi dan tidak memiliki mekanisme class weight.
 
 ### 3.8 Evaluasi
 
@@ -272,23 +283,23 @@ features = FeatureUnion([("word", word), ("char", char)])
 
 | Kelas | Precision | Recall | F1 | Support |
 |---|---:|---:|---:|---:|
-| Normal | 0,8552 | 0,8912 | 0,8729 | 570 |
-| Abusive | 0,7229 | 0,7018 | 0,7122 | 171 |
-| Hate Speech | 0,8528 | 0,8229 | 0,8376 | 542 |
-| **Macro avg** | **0,8103** | **0,8053** | **0,8075** | **1.283** |
-| **Accuracy** | | | **0,8371** | **1.283** |
+| Normal | 0,8545 | 0,9070 | 0,8800 | 570 |
+| Abusive | 0,7337 | 0,7251 | 0,7294 | 171 |
+| Hate Speech | 0,8723 | 0,8192 | 0,8449 | 542 |
+| **Macro avg** | **0,8202** | **0,8171** | **0,8181** | **1.283** |
+| **Accuracy** | | | **0,8457** | **1.283** |
 
-**Analisis.** Kelas Normal paling mudah dikenali karena kosakatanya lebih beragam dan tidak menyerang. Kelas Abusive paling sulit karena sering berbagi kata dengan Hate Speech, tetapi tanpa target kelompok yang jelas. Recall Abusive 0,7018 berarti sekitar 30% teks Abusive lolos atau salah diklasifikasi. Untuk aplikasi moderasi, jenis kesalahan ini perlu diperhatikan karena dapat meloloskan konten yang merendahkan.
+**Analisis.** Kelas Normal paling mudah dikenali karena kosakatanya lebih beragam dan tidak menyerang. Kelas Abusive paling sulit karena sering berbagi kata dengan Hate Speech, tetapi tanpa target kelompok yang jelas. Recall Abusive 0,7251 berarti sekitar 27% teks Abusive lolos atau salah diklasifikasi. Untuk aplikasi moderasi, jenis kesalahan ini perlu diperhatikan karena dapat meloloskan konten yang merendahkan.
 
 ### 3.9 Demo web
 
 **Konsep.** Model harus dapat didemonstrasikan, bukan hanya berupa angka di notebook. Demo web memungkinkan penguji memasukkan teks baru dan melihat keputusan model secara langsung.
 
-**Implementasi.** `app/main.py` menyediakan endpoint `POST /api/predict` yang memuat model `.joblib`, melakukan praproses yang sama dengan training, lalu mengembalikan label, confidence, probabilitas tiga kelas, dan token yang paling memengaruhi prediksi. `public/index.html` menampilkan antarmuka brutalist dengan input teks, contoh, bar probabilitas, dan chip kata.
+**Implementasi.** `app/main.py` menyediakan endpoint `POST /api/predict` yang memuat model `.joblib`, melakukan praproses yang sama dengan training, lalu mengembalikan label, confidence, probabilitas per kelas, dan token yang paling memengaruhi prediksi. Demo memakai model biner (Normal vs Kebencian/Abusif). `public/index.html` menampilkan antarmuka brutalist dengan input teks, contoh, bar probabilitas, dan chip kata.
 
 **Hasil.** Demo berjalan lokal di `http://localhost:8000` dan dapat dideploy ke Vercel. Endpoint `GET /api/model-info` menampilkan macro-F1 dan akurasi dari `results/metrics.json`; `GET /docs` menyediakan dokumentasi API otomatis.
 
-**Analisis.** Explainability dihitung dari koefisien model dikalikan nilai TF-IDF kata pada dokumen. Untuk SVM multikelas, koefisien kelas prediksi menunjukkan arah kontribusi; nilai positif mendorong prediksi, nilai negatif menahannya. Ini bukan kausalitas, melainkan pintasan interpretasi yang berguna untuk memahami perilaku model.
+**Analisis.** Explainability dihitung dari koefisien model dikalikan nilai TF-IDF kata pada dokumen. Untuk SVM biner, koefisien tunggal menunjukkan arah menuju kelas Kebencian/Abusif; nilai positif mendorong prediksi, nilai negatif menahannya. Ini bukan kausalitas, melainkan pintasan interpretasi yang berguna untuk memahami perilaku model.
 
 ---
 
@@ -316,49 +327,69 @@ Gambar 4 memperlihatkan kata yang sering muncul per kelas. Kelas Hate Speech did
 
 ### 4.2 Perbandingan model
 
+**Skema tiga kelas.** Hasil pada test set (1.283 teks):
+
 | Model | Konfigurasi | Val macro-F1 | Test accuracy | Test macro-F1 | Test weighted-F1 |
 |---|---|---:|---:|---:|---:|
-| Multinomial NB | \(\alpha=0,1\) | 0,7698 | 79,89% | 0,7601 | 0,8018 |
-| Regresi Logistik | \(C=1,0\) | 0,8023 | 82,00% | 0,7859 | 0,8216 |
-| Linear SVM | \(C=0,1\) | 0,8056 | 83,71% | **0,8075** | **0,8365** |
+| Multinomial NB | \(\alpha=0,5\) | 0,7268 | 81,76% | 0,7710 | 0,8133 |
+| Regresi Logistik | \(C=5,0\) | 0,7444 | 84,96% | **0,8189** | 0,8495 |
+| Linear SVM | \(C=0,1\) | **0,7490** | 84,57% | 0,8181 | 0,8451 |
 
-SVM unggul sekitar 2,2 poin macro-F1 di atas LR dan 4,7 poin di atas NB. Selisih ini konsisten dengan temuan umum pada klasifikasi teks: model linier dengan regularisasi yang tepat sering kompetitif, terutama ketika jumlah data tidak mencapai jutaan contoh.
+**Skema biner.** Hasil pada test set yang sama, dengan Abusive dan Hate Speech digabung menjadi Kebencian/Abusif:
+
+| Model | Konfigurasi | Val macro-F1 | Test accuracy | Test macro-F1 |
+|---|---|---:|---:|---:|
+| Multinomial NB | \(\alpha=0,5\) | 0,8379 | 86,05% | 0,8573 |
+| Regresi Logistik | \(C=5,0\) | 0,8610 | 88,70% | 0,8860 |
+| Linear SVM | \(C=0,1\) | **0,8635** | **89,01%** | **0,8893** |
+
+SVM unggul pada validation set di kedua skema, sehingga dipilih sebagai model final. Pada test set tiga kelas, LR sedikit lebih tinggi (0,8189 vs 0,8181), tetapi selisih 0,0008 tidak berarti dan tidak boleh dipakai untuk mengganti model yang sudah dipilih di validation.
+
+Selisih antara skema tiga kelas dan biner jauh lebih besar daripada selisih antar-algoritma:
+
+| Perbandingan | Selisih macro-F1 |
+|---|---:|
+| NB → SVM (tiga kelas) | +0,047 |
+| NB → SVM (biner) | +0,032 |
+| Tiga kelas → biner (SVM) | **+0,071** |
+
+Artinya, keputusan **skema label** memberi dampak lebih besar daripada keputusan **algoritma**. Ini konsisten dengan temuan pada Bab 4.7 dan 4.8.
 
 ### 4.3 Confusion matrix dan pola kesalahan
 
-Confusion matrix model SVM tersedia di `results/confusion_matrix.png`. Dari 1.283 teks uji, 1.074 diprediksi benar dan 209 salah. Sebaran lengkapnya:
+Confusion matrix model SVM tiga kelas tersedia di `results/confusion_matrix_3class.png`. Dari 1.283 teks uji, 1.085 diprediksi benar dan 198 salah. Sebaran lengkapnya:
 
 | Aktual \ Prediksi | Normal | Abusive | Hate Speech | Total |
 |---|---:|---:|---:|---:|
-| **Normal** | **508** | 20 | 42 | 570 |
-| **Abusive** | 16 | **120** | 35 | 171 |
-| **Hate Speech** | 70 | 26 | **446** | 542 |
-| **Total** | 594 | 166 | 523 | 1.283 |
+| **Normal** | **517** | 20 | 33 | 570 |
+| **Abusive** | 15 | **124** | 32 | 171 |
+| **Hate Speech** | 73 | 25 | **444** | 542 |
+| **Total** | 605 | 169 | 509 | 1.283 |
 
 Pola utamanya:
 
-- **Hate Speech → Normal** adalah kesalahan terbanyak (70 teks, 12,9% dari kelas Hate Speech). Banyak teks hate speech tidak memakai kata kasar eksplisit, sehingga model kehilangan sinyal leksikal yang biasa ia andalkan.
-- **Normal → Hate Speech** (42 teks, 7,4%) biasanya terjadi pada teks yang membahas kelompok atau politik dengan kata yang mirip dengan data hate speech.
-- **Abusive → Hate Speech** (35 teks, 20,5% dari kelas Abusive) menunjukkan batas yang paling kabur: keduanya berbagi kata kasar, dan model kadang terlalu agresif menyimpulkan adanya target kelompok.
-- **Abusive → Normal** (16 teks) dan **Normal → Abusive** (20 teks) lebih sedikit, tetapi tetap menunjukkan bahwa kata kasar saja tidak cukup untuk menentukan kelas.
+- **Hate Speech → Normal** adalah kesalahan terbanyak (73 teks, 13,5% dari kelas Hate Speech). Banyak teks hate speech tidak memakai kata kasar eksplisit, sehingga model kehilangan sinyal leksikal yang biasa ia andalkan.
+- **Normal → Hate Speech** (33 teks, 5,8%) biasanya terjadi pada teks yang membahas kelompok atau politik dengan kata yang mirip dengan data hate speech.
+- **Abusive → Hate Speech** (32 teks, 18,7% dari kelas Abusive) menunjukkan batas yang paling kabur: keduanya berbagi kata kasar, dan model kadang terlalu agresif menyimpulkan adanya target kelompok.
+- **Abusive → Normal** (15 teks) dan **Normal → Abusive** (20 teks) lebih sedikit, tetapi tetap menunjukkan bahwa kata kasar saja tidak cukup untuk menentukan kelas.
 
-Secara agregat, kebingungan terbesar adalah **Hate Speech ↔ Normal** (112 teks), disusul **Abusive ↔ Hate Speech** (61 teks), lalu **Normal ↔ Abusive** (36 teks). Ini konsisten dengan sifat data: kelas Abusive berada di antara dua kutub, sedangkan Hate Speech dan Normal sama-sama bisa membahas topik yang sama dengan cara yang berbeda.
+Secara agregat, kebingungan terbesar adalah **Hate Speech ↔ Normal** (106 teks), disusul **Abusive ↔ Hate Speech** (57 teks), lalu **Normal ↔ Abusive** (35 teks). Ini konsisten dengan sifat data: kelas Abusive berada di antara dua kutub, sedangkan Hate Speech dan Normal sama-sama bisa membahas topik yang sama dengan cara yang berbeda.
 
-![Gambar 5. Confusion matrix model Linear SVM pada data uji.](../results/confusion_matrix.png)
+![Gambar 5. Confusion matrix model Linear SVM tiga kelas pada data uji.](../results/confusion_matrix_3class.png)
 
-*Gambar 5. Confusion matrix model Linear SVM pada 1.283 teks uji.*
+*Gambar 5. Confusion matrix model Linear SVM tiga kelas pada 1.283 teks uji.*
 
 **Ambang indikasi.** Demo web memakai aturan *argmax*, yaitu kelas dengan skor tertinggi, sehingga tidak ada ambang persen tetap. Jika ingin satu ambang untuk keputusan biner “indikasi hate”, hasil sapuan ambang pada test set adalah:
 
 | Aturan | Precision | Recall | F1 | Hate terdeteksi |
 |---|---:|---:|---:|---:|
-| Argmax (demo) | 0,8528 | 0,8229 | 0,8376 | 446/542 |
-| Skor hate ≥ 0,35 | 0,8033 | 0,8893 | **0,8441** | 482/542 |
-| Skor hate ≥ 0,50 | 0,9002 | 0,6827 | 0,7765 | 370/542 |
+| Argmax (demo) | 0,8723 | 0,8192 | 0,8449 | 444/542 |
+| Skor hate ≥ 0,35 | 0,8131 | 0,8911 | **0,8504** | 483/542 |
+| Skor hate ≥ 0,50 | 0,9179 | 0,6808 | 0,7818 | 369/542 |
 
 Ambang 0,35 memberi recall tertinggi (88,9%) dengan konsekuensi lebih banyak false positive; ambang 0,50 lebih konservatif (precision 90,0%) tetapi melewatkan sekitar 31,7% hate speech. Untuk penyaringan awal yang menekankan jangan sampai lolos, ambang 0,35 lebih masuk akal; untuk keputusan yang lebih hati-hati, gunakan 0,50. Perlu ditegaskan bahwa skor SVM bukan probabilitas terkalibrasi, sehingga “0,35” bukan berarti “35% peluang hate”; ambang ini relatif terhadap dataset 2019 dan perlu dikalibrasi ulang pada data validasi atau data baru.
 
-Angka per kelas menunjukkan bahwa model lebih konservatif pada Abusive: precision 0,7229 dan recall 0,7018. Artinya, ketika model memprediksi Abusive, sekitar 28% di antaranya sebenarnya kelas lain; dan sekitar 30% teks Abusive tidak terdeteksi. Untuk penggunaan nyata, ambang keputusan dapat disesuaikan: menurunkan ambang Abusive akan meningkatkan recall tetapi menurunkan precision.
+Angka per kelas menunjukkan bahwa model lebih konservatif pada Abusive: precision 0,7337 dan recall 0,7251. Artinya, ketika model memprediksi Abusive, sekitar 27% di antaranya sebenarnya kelas lain; dan sekitar 27% teks Abusive tidak terdeteksi. Untuk penggunaan nyata, ambang keputusan dapat disesuaikan: menurunkan ambang Abusive akan meningkatkan recall tetapi menurunkan precision.
 
 ### 4.4 Analisis kesalahan kualitatif
 
@@ -383,25 +414,71 @@ Analisis ini harus dibaca dengan hati-hati. Koefisien tinggi tidak berarti kata 
 
 ### 4.6 Demo dan pengalaman pengguna
 
-Demo web menampilkan tiga hal yang tidak terlihat di notebook: label prediksi, distribusi skor tiga kelas, dan kata yang mendorong/menahan prediksi. Fitur terakhir membuat model lebih transparan: pengguna dapat melihat apakah keputusan didasarkan pada kata yang relevan atau pada artefak data. Antarmuka juga menyediakan contoh Normal, Abusive, dan Hate Speech untuk mempercepat demonstrasi di depan kelas.
+Demo web menampilkan tiga hal yang tidak terlihat di notebook: label prediksi, distribusi skor per kelas, dan kata yang mendorong/menahan prediksi. Fitur terakhir membuat model lebih transparan: pengguna dapat melihat apakah keputusan didasarkan pada kata yang relevan atau pada artefak data. Antarmuka juga menyediakan contoh Normal dan Kebencian/Abusif bergaya 2026 untuk mempercepat demonstrasi di depan kelas.
 
 Satu keterbatasan demo adalah skor SVM bukan probabilitas terkalibrasi. Softmax dari `decision_function` berguna untuk perbandingan relatif, tetapi tidak boleh ditafsirkan sebagai peluang sebenarnya. Jika sistem ini dikembangkan lebih lanjut, kalibrasi Platt atau isotonic regression dapat ditambahkan.
 
 ![Gambar 6. Tampilan demo web saat mengklasifikasi contoh Hate Speech.](../results/demo_screenshot.png)
 
-*Gambar 6. Tampilan demo web: label, skor tiga kelas, dan token yang mendorong/menahan prediksi.*
+*Gambar 6. Tampilan demo web: label, skor dua kelas, dan token yang mendorong/menahan prediksi.*
 
-### 4.7 Relevansi dataset dan validitas temporal
+### 4.7 Uji generalisasi pada kalimat bergaya 2026
 
-Dataset ini berasal dari Twitter 2018–2019. Dalam tujuh tahun, bahasa media sosial berubah: muncul istilah seperti *rizz*, *flexing*, *ansos*, dan *mager*, platform percakapan bergeser ke TikTok dan Instagram, dan target ujaran mencakup isu-isu yang belum banyak muncul pada 2019. Karena itu, hasil 83,71% tidak boleh dibaca sebagai performa pada data 2026.
+**Konsep.** Skor test set hanya mengukur performa pada distribusi yang sama dengan data latih. Untuk menguji apakah model benar-benar belajar konsep, tim menyusun 24 kalimat baru bergaya 2026 (8 Normal, 8 hinaan langsung, 8 serangan ke kelompok) yang membahas isu terkini: program makan bergizi, efisiensi anggaran, judi online, pinjaman online, dan politik 2024–2026.
 
-Untuk menutup celah ini, penelitian ini menambahkan kamus slang 2026 dan menyediakan prosedur uji temporal di `data/temporal/README.md`. Tim dapat mengumpulkan 100–200 komentar terbaru, melabelinya secara independen oleh dua anotator, lalu menjalankan `src/evaluate_temporal.py`. Penurunan performa pada sampel baru adalah temuan yang valid tentang *domain shift*, bukan kegagalan penelitian. Dengan demikian, klaim yang dibuat tetap jujur: model valid pada distribusi data yang mirip dengan data latih, dan belum tentu valid pada distribusi 2026.
+**Implementasi.** Kalimat disusun manual oleh tim dan dilabeli sendiri, sehingga bersifat *probe* dan bukan test set resmi. Setiap kalimat dilewatkan ke pipeline yang sama dengan demo (`src/inference.py`).
 
-### 4.8 Ancaman validitas
+**Hasil.** Pada skema tiga kelas, hanya 14 dari 24 kalimat (58,3%) terklasifikasi benar. Pola kesalahannya sangat terpusat:
 
-1. **Validitas konstruk.** Label asli adalah hasil anotasi manusia yang subjektif. Batas antara Abusive dan Hate Speech tidak selalu tajam, terutama pada sarkasme dan sindiran.
+| Pola kesalahan | Jumlah |
+|---|---:|
+| Abusive → Hate Speech | **7** |
+| Normal → Hate Speech | 2 |
+| Hate Speech → Normal | 1 |
+
+Dari 8 hinaan langsung, hanya 1 yang benar dikenali sebagai Abusive. Contoh: "Kamu goblok banget sih" diprediksi Hate Speech dengan keyakinan 69,9%; "Otak lo di mana" diprediksi Hate Speech 77,2%.
+
+**Analisis.** Ada dua dugaan: modelnya kurang canggih, atau labelnya tidak konsisten. Keduanya diuji.
+
+Pertama, classifier **khusus** Abusive vs Hate Speech dilatih (tanpa kelas Normal, hanya pada 5.700 teks toxic). Hasilnya pada 16 kalimat probe: seluruh 8 serangan kelompok benar, tetapi hanya 2 dari 8 hinaan langsung yang benar. Jadi menambah kelas bukan penyebabnya.
+
+Kedua, label dataset diperiksa. Dari 1.474 teks yang mengandung kata hinaan (`goblok`, `tolol`, `bego`, `anjing`, dan sejenisnya), 64,7% dilabeli **Hate Speech**, 30,8% Abusive, dan 4,5% Normal. Lebih tegas lagi: dari 1.229 teks berhinaan yang **tidak menyebut kelompok sama sekali**, 719 (58%) tetap dilabeli Hate Speech.
+
+Artinya, aturan "tanpa target kelompok = Abusive" yang tersirat pada skema tiga kelas **tidak dipakai saat anotasi**. Dataset aslinya multilabel: satu tweet dapat ditandai HS = 1 sekaligus Abusive = 1, dan pemetaan ke tiga kelas memprioritaskan HS. Model hanya meniru distribusi itu; tidak ada algoritma yang dapat menebak aturan yang tidak konsisten di datanya.
+
+### 4.8 Keputusan skema final
+
+**Konsep.** Karena batas Abusive–Hate Speech tidak dapat dipelajari secara konsisten, skema final disederhanakan menjadi biner: **Normal** vs **Kebencian/Abusif**. Kelas positif mencakup ujaran kebencian (menyerang kelompok) maupun bahasa abusif (hinaan tanpa target kelompok) — persis cakupan pada judul penelitian.
+
+**Implementasi.** `src/train_binary.py` memakai data, praproses, fitur, split, dan protokol tuning yang identik; hanya labelnya yang digabung. Model tiga kelas tetap disimpan sebagai `models/best_model_3class.joblib` dan dilaporkan pada Bab 4.2–4.7.
+
+**Hasil.** Linear SVM (C = 0,1) tetap terpilih pada validation set. Pada 1.283 teks uji:
+
+| Kelas | Precision | Recall | F1 | Support |
+|---|---|---:|---:|---:|
+| Normal | 0,8557 | 0,9053 | 0,8798 | 570 |
+| Kebencian/Abusif | 0,9206 | 0,8780 | 0,8988 | 713 |
+| **Macro avg** | **0,8882** | **0,8916** | **0,8893** | **1.283** |
+| **Accuracy** | | | **0,8901** | **1.283** |
+
+Confusion matrix: 516 Normal benar, 626 Kebencian/Abusif benar, 54 false positive, dan 87 false negative. Pada 24 kalimat probe 2026 yang sama, akurasi naik dari 58,3% menjadi **83,3% (20/24)**.
+
+**Analisis.** Kenaikan terbesar bukan berasal dari algoritma, melainkan dari definisi kelas. Perbandingan langsung:
+
+| Skenario | Test macro-F1 | Probe 2026 |
+|---|---:|---:|
+| Tiga kelas, SVM | 0,8181 | 58,3% |
+| Biner, SVM | **0,8893** | **83,3%** |
+
+Skema biner juga lebih stabil: selisih performa antara test set dan probe 2026 hanya 5,7 poin, sedangkan skema tiga kelas terpaut 23 poin. Stabilitas ini indikator yang lebih baik daripada accuracy tinggi yang hanya berlaku pada satu distribusi.
+
+Konsekuensinya, model kehilangan kemampuan membedakan hinaan biasa dari serangan kelompok. Untuk penggunaan moderasi, informasi itu memang berguna, tetapi tidak sebanding dengan risiko model yang salah 42% pada kalimat baru. Pemisahan rinci dapat ditambahkan sebagai tahap kedua bila tersedia data anotasi yang konsisten.
+
+### 4.9 Ancaman validitas
+
+1. **Validitas konstruk.** Label asli adalah hasil anotasi manusia yang subjektif. Batas antara Abusive dan Hate Speech tidak selalu tajam, terutama pada sarkasme dan sindiran. Temuan pada Bab 4.7 memperkuat hal ini secara kuantitatif: 64,7% teks yang mengandung kata hinaan dilabeli Hate Speech, dan 58% teks berhinaan tanpa menyebut kelompok tetap dilabeli Hate Speech. Artinya, aturan "target kelompok = Hate Speech" tidak dipakai secara konsisten oleh anotator.
 2. **Validitas internal.** TF-IDF di-fit pada data latih, dan tuning dilakukan pada validation. Namun, pemilihan fitur dan parameter praproses masih dipengaruhi oleh eksplorasi data, sehingga ada risiko *researcher degrees of freedom*.
-3. **Validitas eksternal.** Data Twitter 2019 tidak mewakili TikTok, Instagram, atau percakapan grup pada 2026. Model juga tidak dilatih pada bahasa daerah atau campuran kode yang lebih kompleks.
+3. **Validitas eksternal.** Data Twitter 2019 tidak mewakili TikTok, Instagram, atau percakapan grup pada 2026. Ini sudah diukur, bukan sekadar diduga: akurasi turun dari 84,57% pada test set menjadi 58,3% pada 24 kalimat bergaya 2026. Model juga tidak dilatih pada bahasa daerah atau campuran kode yang lebih kompleks.
 4. **Validitas statistik.** Ukuran test 1.283 cukup untuk estimasi kasar, tetapi interval kepercayaan untuk macro-F1 belum dihitung. Untuk klaim yang lebih kuat, bootstrap confidence interval dapat ditambahkan.
 5. **Etika.** Model dapat bias terhadap kelompok tertentu karena data historis. Sistem tidak boleh dipakai untuk menghukum individu tanpa tinjauan manusia.
 
@@ -411,19 +488,21 @@ Untuk menutup celah ini, penelitian ini menambahkan kamus slang 2026 dan menyedi
 
 ### 5.1 Kesimpulan
 
-Penelitian ini berhasil membangun pipeline klasifikasi ujaran kebencian bahasa Indonesia dari data mentah sampai demo web. Tiga model klasik dibandingkan dengan protokol evaluasi yang terkontrol. Linear SVM dengan TF-IDF word dan char n-gram memberikan performa terbaik: akurasi 83,71% dan macro-F1 0,8075 pada 1.283 teks uji. Regresi Logistik berada di posisi kedua (macro-F1 0,7859), sedangkan Multinomial Naive Bayes berada di posisi ketiga (0,7601).
+Penelitian ini berhasil membangun pipeline klasifikasi ujaran kebencian bahasa Indonesia dari data mentah sampai demo web. Tiga model klasik dibandingkan dengan protokol evaluasi yang terkontrol. Pada skema tiga kelas, Linear SVM dengan TF-IDF word dan char n-gram memberi macro-F1 0,8181 dan akurasi 84,57% pada 1.283 teks uji; Regresi Logistik 0,8189 dan Naive Bayes 0,7710.
 
-Kelas Abusive merupakan kelas tersulit dengan F1 0,7122. Analisis kesalahan menunjukkan bahwa batas antara Abusive dan Hate Speech sering kabur, dan model *bag-of-words* tidak cukup untuk memahami sarkasme, negasi, dan konteks. Char n-gram membantu menangani variasi ejaan, sementara class weight membantu model memperhatikan kelas minoritas.
+Kelas Abusive merupakan kelas tersulit dengan F1 0,7294. Uji generalisasi pada 24 kalimat bergaya 2026 menurunkan akurasi ke 58,3%, dengan 7 dari 8 hinaan langsung salah diklasifikasi sebagai Hate Speech. Penelusuran menunjukkan penyebabnya bukan arsitektur model: classifier khusus Abusive vs Hate Speech pun hanya mengenali 2 dari 8 hinaan, dan 64,7% teks berhinaan di dataset memang dilabeli Hate Speech. Dengan kata lain, batas antar-kelas tidak konsisten pada data, sehingga tidak dapat dipelajari oleh model mana pun.
+
+Karena itu skema final disederhanakan menjadi biner Normal vs Kebencian/Abusif. Model ini mencapai macro-F1 0,8893 dan akurasi 89,01% pada test set, serta 83,3% pada uji 2026 yang sama — selisih hanya 5,7 poin, jauh lebih stabil daripada skema tiga kelas yang terpaut 23 poin. Temuan utamanya: pada penelitian ini, kualitas definisi label membatasi performa lebih kuat daripada pilihan algoritma.
 
 Dari sisi rekayasa, pipeline ini menunjukkan bahwa model linier yang murah dan cepat masih layak menjadi baseline. Demo web dengan penjelasan token membuat keputusan model lebih mudah dipahami, meskipun skor SVM belum terkalibrasi sebagai probabilitas.
 
 ### 5.2 Saran
 
-1. **Bandingkan dengan IndoBERT.** *Fine-tune* IndoBERT atau model transformer Indonesia lainnya untuk melihat seberapa besar peningkatan yang diperoleh dibanding model linier.
-2. **Uji temporal 2026.** Kumpulkan 100–200 komentar terbaru dan bandingkan performa untuk mengukur *domain shift* secara empiris.
-3. **Tangani kelas Abusive.** Coba *oversampling*, *focal loss*, atau penggabungan kelas Abusive–Hate Speech bila tujuan aplikasi lebih menekankan deteksi bahasa kasar secara umum.
+1. **Perbaiki definisi label.** Sebelum menambah model, sepakati aturan anotasi yang eksplisit (misalnya: ada target kelompok atau tidak) dan ukur agreement antar-anotator. Ini memberi dampak lebih besar daripada mengganti algoritma.
+2. **Uji temporal yang lebih besar.** Perluas probe 2026 menjadi 100–200 kalimat yang dianotasi dua orang independen, agar estimasi *domain shift* punya interval kepercayaan.
+3. **Transformer sebagai pembanding.** *Fine-tune* IndoBERT pada data yang sama; studi pendahuluan menunjukkan kenaikan hanya sekitar 1,6 poin pada skema tiga kelas, tetapi belum diuji pada kalimat 2026.
 4. **Kalibrasi probabilitas.** Gunakan Platt scaling atau isotonic regression agar skor SVM dapat ditafsirkan sebagai peluang.
-5. **Analisis konteks.** Tambahkan fitur negasi, target ujaran, atau model berbasis transformer untuk menangkap hubungan antar-kata.
+5. **Tahap kedua opsional.** Bila tersedia anotasi yang konsisten, tambahkan classifier Abusive vs Hate Speech sebagai tahap kedua di atas model biner.
 6. **Evaluasi etis.** Libatkan annotator manusia dari berbagai latar belakang dan uji bias model terhadap kelompok tertentu sebelum digunakan di luar demonstrasi.
 
 ---
@@ -454,21 +533,25 @@ Sastrawi. (n.d.). *Sastrawi: Indonesian stemmer library* [Perangkat lunak]. GitH
 tugas-besar-nlp/
 ├─ app/main.py, public/index.html
 ├─ data/raw/, data/processed/, data/temporal/
-├─ models/best_model.joblib, models/preprocess_config.json
-├─ results/ (metrik, confusion matrix, error analysis, top features)
-├─ src/download_data.py, preprocess.py, train.py, inference.py, evaluate_temporal.py
+├─ models/best_model.joblib          # model final biner (dipakai demo)
+├─ models/best_model_3class.joblib   # model tiga kelas (pembanding)
+├─ models/preprocess_config.json
+├─ results/ (metrik, confusion matrix, error analysis, top features, probe_2026.csv)
+├─ src/download_data.py, preprocess.py, train.py, train_binary.py, inference.py,
+│   evaluate_temporal.py
 ├─ reports/laporan.md, reports/slides.md
-├─ requirements.txt
+├─ requirements.txt, requirements-dev.txt
 └─ README.md
 ```
 
 ## Lampiran B — Cara Menjalankan
 
 ```bash
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
 python src/download_data.py
 python src/preprocess.py
-python src/train.py
+python src/train.py          # model tiga kelas (pembanding)
+python src/train_binary.py   # model final biner untuk demo
 uvicorn app.main:app --reload --port 8000
 ```
 

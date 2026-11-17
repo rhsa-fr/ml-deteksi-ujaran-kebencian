@@ -1,30 +1,30 @@
 {
   "jumlah_baris_mentah": 13169,
-  "jumlah_baris_setelah_dedup": 12828,
-  "jumlah_duplikat_dibuang": 341,
+  "jumlah_baris_setelah_dedup": 12822,
+  "jumlah_duplikat_dibuang": 347,
   "distribusi_kelas": {
-    "Normal": 5701,
+    "Normal": 5697,
     "Abusive": 1709,
-    "Hate Speech": 5418
+    "Hate Speech": 5416
   },
   "persentase_kelas": {
-    "Normal": 44.44,
-    "Abusive": 13.32,
+    "Normal": 44.43,
+    "Abusive": 13.33,
     "Hate Speech": 42.24
   },
   "panjang_karakter": {
     "min": 3,
-    "median": 96.0,
-    "mean": 111.68,
+    "median": 95.0,
+    "mean": 110.34,
     "max": 501
   },
   "panjang_kata": {
     "min": 1,
-    "median": 16.0,
-    "mean": 18.09,
+    "median": 15.0,
+    "mean": 17.9,
     "max": 143
   },
-  "jumlah_kosakata_unik": 19155,
+  "jumlah_kosakata_unik": 19147,
   "contoh_per_kelas": {
     "Normal": [
       "kadang aku berpikir kenapa aku tetap percaya pada tuhan padahal aku selalu jatuh berkali kali kadang aku merasa tuhan itu meninggalkan aku sendirian ketika orang tuaku berencana berpisah ketika kakakku lebih memilih jadi kristen ketika aku anak ter",

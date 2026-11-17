@@ -29,13 +29,12 @@ DISPLAY = "Arial Black"
 MONO = "Consolas"
 BODY = "Arial"
 
-METRICS = json.loads((RESULTS / "metrics.json").read_text(encoding="utf-8"))
-BEST = METRICS["best_metrics"]
-COMPARISON = {
-    "nb": METRICS["models"]["nb"]["test"],
-    "lr": METRICS["models"]["lr"]["test"],
-    "svm": METRICS["models"]["svm"]["test"],
-}
+# Tabel perbandingan dan confusion matrix memakai skema tiga kelas;
+# angka model final memakai skema biner.
+METRICS_3CLASS = json.loads(
+    (RESULTS / "metrics_3class.json").read_text(encoding="utf-8")
+)
+METRICS_BINARY = json.loads((RESULTS / "metrics.json").read_text(encoding="utf-8"))
 
 prs = Presentation()
 prs.slide_width = Inches(13.333)
@@ -124,7 +123,7 @@ def new_slide(number: str, kicker: str, title: str):
 # ---------------------------------------------------------------- slide 1
 slide = prs.slides.add_slide(prs.slide_layouts[6])
 add_bg(slide)
-ticker(slide, "13.169 TWEET  ///  TF-IDF  ///  NAIVE BAYES · LOGREG · SVM  ///  MACRO-F1 0,8075")
+ticker(slide, "13.169 TWEET  ///  TF-IDF  ///  NAIVE BAYES · LOGREG · SVM  ///  MACRO-F1 0,8893")
 add_rect(slide, 0.6, 0.85, 1.55, 0.62, INK, INK, 0)
 add_text(slide, 0.72, 1.00, 1.4, 0.35, "NLP/26", 18, LIME, True, DISPLAY)
 add_text(slide, 2.35, 0.95, 7, 0.5, "LABORATORIUM KECERDASAN BUATAN · TUGAS BESAR", 10, MUTED, True, MONO)
@@ -139,7 +138,7 @@ add_text(
     5.55,
     8.4,
     0.9,
-    "Tiga kelas: Normal, Abusive, Hate Speech.\nPipeline: praproses → TF-IDF → tiga model klasik → evaluasi → demo web.",
+    "Dua kelas final: Normal vs Kebencian/Abusif.\nStudi pembanding: Normal / Abusive / Hate Speech.",
     13,
     INK,
     False,
@@ -154,8 +153,8 @@ footer(slide, "01")
 slide = new_slide("02", "MASALAH", "Moderasi manual tidak skalabel.")
 cards = [
     ("13.169", "tweet pada dataset\n2018–2019", LIME),
-    ("3", "kelas yang harus\ndibedakan model", ORANGE),
-    ("0,8075", "macro-F1 model\nterbaik di test", PINK),
+    ("2", "kelas final\n(studi: 3 kelas)", ORANGE),
+    ("0,8893", "macro-F1 model\nterbaik di test", PINK),
 ]
 for i, (big, small, color) in enumerate(cards):
     x = 0.6 + i * 4.1
@@ -284,9 +283,9 @@ footer(slide, "07")
 slide = new_slide("08", "HASIL", "Linear SVM menang tipis.")
 rows = [
     ("Model", "Val F1", "Acc", "Macro-F1", "Weighted-F1"),
-    ("Naive Bayes", "0,7698", "79,89%", "0,7601", "0,8018"),
-    ("Regresi Logistik", "0,8023", "82,00%", "0,7859", "0,8216"),
-    ("Linear SVM", "0,8056", "83,71%", "0,8075", "0,8365"),
+    ("Naive Bayes", "0,7268", "81,76%", "0,7710", "0,8133"),
+    ("Regresi Logistik", "0,7444", "84,96%", "0,8189", "0,8495"),
+    ("Linear SVM", "0,7490", "84,57%", "0,8181", "0,8451"),
 ]
 table_shape = slide.shapes.add_table(4, 5, Inches(0.6), Inches(1.95), Inches(12.1), Inches(2.8))
 table = table_shape.table
@@ -320,39 +319,39 @@ for r, row in enumerate(rows):
                 run.font.name = MONO
                 run.font.bold = r in (0, 3)
                 run.font.color.rgb = color
-add_text(slide, 0.6, 5.1, 12.1, 0.4, "KENAPA SVM?", 11, MUTED, True, MONO)
-add_text(slide, 0.6, 5.45, 12.1, 1.1, "Data teks berdimensi tinggi cenderung linear-separable.\nMargin maksimum memberi regularisasi alami; LR sedikit kalah, NB paling cepat tetapi asumsinya paling kuat.", 13, INK, False, BODY, line_spacing=1.3)
-add_text(slide, 0.6, 6.7, 12.1, 0.3, "Sumber: results/model_comparison.csv · results/metrics.json", 9, MUTED, False, MONO)
+add_text(slide, 0.6, 5.1, 12.1, 0.4, "TABEL DI ATAS: SKEMA TIGA KELAS (STUDI PEMBANDING)", 11, MUTED, True, MONO)
+add_text(slide, 0.6, 5.45, 12.1, 1.1, "Model final di demo memakai skema biner: SVM 89,01% akurasi, macro-F1 0,8893.\nSelisih antar-algoritma (±0,05) jauh lebih kecil daripada selisih antar-skema label (+0,071).", 13, INK, False, BODY, line_spacing=1.3)
+add_text(slide, 0.6, 6.7, 12.1, 0.3, "Sumber: results/metrics.json, results/metrics_3class.json", 9, MUTED, False, MONO)
 footer(slide, "08")
 
 # ---------------------------------------------------------------- slide 9
 slide = new_slide("09", "EVALUASI", "Confusion matrix: di mana model salah?")
-slide.shapes.add_picture(str(RESULTS / "confusion_matrix.png"), Inches(0.6), Inches(1.85), height=Inches(4.9))
-add_text(slide, 7.0, 1.9, 5.7, 0.35, "DARI 1.283 TEKS UJI", 11, MUTED, True, MONO)
-add_text(slide, 7.0, 2.25, 5.7, 0.9, "1.074 benar\n209 salah", 30, INK, True, DISPLAY, line_spacing=1.0)
-add_text(slide, 7.0, 3.35, 5.7, 2.8, "Hate Speech → Normal: 70\nNormal → Hate Speech: 42\nAbusive → Hate Speech: 35\nHate Speech → Abusive: 26\n\nKesalahan terbesar: batas\nHate Speech ↔ Normal (112).", 12.5, INK, False, MONO, line_spacing=1.25)
+slide.shapes.add_picture(str(RESULTS / "confusion_matrix_3class.png"), Inches(0.6), Inches(1.85), height=Inches(4.9))
+add_text(slide, 7.0, 1.9, 5.7, 0.35, "DARI 1.283 TEKS UJI (TIGA KELAS)", 11, MUTED, True, MONO)
+add_text(slide, 7.0, 2.25, 5.7, 0.9, "1.085 benar\n198 salah", 30, INK, True, DISPLAY, line_spacing=1.0)
+add_text(slide, 7.0, 3.35, 5.7, 2.8, "Hate Speech → Normal: 73\nNormal → Hate Speech: 33\nAbusive → Hate Speech: 32\nHate Speech → Abusive: 25\n\nKesalahan terbesar: batas\nHate Speech ↔ Normal (106).", 12.5, INK, False, MONO, line_spacing=1.25)
 add_rect(slide, 7.0, 6.2, 5.5, 0.55, ORANGE, INK, 3)
 add_text(slide, 7.15, 6.32, 5.2, 0.3, "Abusive adalah kelas tersulit.", 11, INK, True, MONO)
 footer(slide, "09")
 
 # ---------------------------------------------------------------- slide 10
 slide = new_slide("10", "PER KELAS", "Abusive masih tertinggal.")
-per_class = [("Normal", 0.8729, LIME), ("Abusive", 0.7122, ORANGE), ("Hate Speech", 0.8376, RED)]
+per_class = [("Normal", 0.8800, LIME), ("Abusive", 0.7294, ORANGE), ("Hate Speech", 0.8449, RED)]
 for i, (label, value, color) in enumerate(per_class):
     y = 1.95 + i * 1.45
     add_text(slide, 0.6, y, 1.8, 0.35, label, 12, INK, True, MONO)
     add_rect(slide, 2.5, y, 7.0, 0.55, WHITE, INK, 2)
     add_rect(slide, 2.5, y, 7.0 * value, 0.55, color, INK, 2)
     add_text(slide, 9.7, y + 0.05, 1.2, 0.4, f"{value:.4f}".replace(".", ","), 14, INK, True, MONO)
-add_text(slide, 0.6, 6.35, 12.2, 0.5, "Macro-F1 0,8075 — rata-rata F1 tiga kelas, bukan akurasi keseluruhan.", 11, MUTED, True, MONO)
+add_text(slide, 0.6, 6.35, 12.2, 0.5, "Macro-F1 0,8181 — rata-rata F1 tiga kelas, bukan akurasi keseluruhan.", 11, MUTED, True, MONO)
 footer(slide, "10")
 
 # ---------------------------------------------------------------- slide 11
 slide = new_slide("11", "ERROR ANALYSIS", "Kesalahan yang paling mahal.")
 errors = [
-    ("HATE → NORMAL", "70 teks", "Sarkasme tanpa kata kasar; model kehilangan sinyal leksikal.", ORANGE),
-    ("ABUSIVE → HATE", "35 teks", "Kata kasar + kata kelompok; batas kelas kabur.", PINK),
-    ("NORMAL → HATE", "42 teks", "Topik politik/agama memicu false positive.", LIME),
+    ("HATE → NORMAL", "73 teks", "Sarkasme tanpa kata kasar; model kehilangan sinyal leksikal.", ORANGE),
+    ("ABUSIVE → HATE", "32 teks", "Kata kasar + kata kelompok; batas kelas kabur.", PINK),
+    ("NORMAL → HATE", "33 teks", "Topik politik/agama memicu false positive.", LIME),
 ]
 for i, (title, count, detail, color) in enumerate(errors):
     x = 0.6 + i * 4.1
@@ -367,7 +366,7 @@ footer(slide, "11")
 slide = new_slide("12", "DEMO", "Model yang bisa dicoba.")
 slide.shapes.add_picture(str(RESULTS / "demo_screenshot.png"), Inches(0.6), Inches(1.8), height=Inches(5.1))
 add_text(slide, 6.8, 1.9, 5.9, 0.35, "FITUR DEMO", 11, MUTED, True, MONO)
-add_text(slide, 6.8, 2.3, 5.9, 3.9, "Input teks bebas\nLabel + confidence\nSkor tiga kelas\nToken pendorong / penahan\nTeks setelah praproses\n\nEndpoint: /api/predict,\n/api/model-info, /api/health,\n/docs", 13, INK, False, MONO, line_spacing=1.3)
+add_text(slide, 6.8, 2.3, 5.9, 3.9, "Input teks bebas\nLabel + confidence\nSkor dua kelas\nToken pendorong / penahan\nTeks setelah praproses\n\nEndpoint: /api/predict,\n/api/model-info, /api/health,\n/docs", 13, INK, False, MONO, line_spacing=1.3)
 add_rect(slide, 6.8, 6.3, 5.7, 0.55, LIME, INK, 3)
 add_text(slide, 6.95, 6.42, 5.4, 0.3, "buka di http://localhost:8000", 10, INK, True, MONO)
 footer(slide, "12")
@@ -376,8 +375,8 @@ footer(slide, "12")
 slide = new_slide("13", "BATASAN", "Jangan klaim lebih dari yang diuji.")
 limits = [
     ("DATASET 2019", "Twitter 2018–2019; bahasa dan platform sudah berubah."),
-    ("DOMAIN SHIFT", "Belum diuji pada data 2026; template uji temporal tersedia."),
-    ("BIAS POLITIK", "Token seperti cebong/ahok/prabowo menjadi pintasan."),
+    ("DOMAIN SHIFT", "Sudah diukur: akurasi turun ke 58,3% pada 24 kalimat bergaya 2026."),
+    ("BIAS ENTITAS", "Nama tokoh dinetralkan; tanpa itu 'Jokowi' saja memicu 87,6% hate."),
     ("BUKAN PRODUKSI", "Perlu tinjauan manusia; skor SVM belum terkalibrasi."),
 ]
 for i, (title, detail) in enumerate(limits):
@@ -389,19 +388,47 @@ for i, (title, detail) in enumerate(limits):
 footer(slide, "13")
 
 # ---------------------------------------------------------------- slide 14
-slide = new_slide("14", "KESIMPULAN", "Baseline kuat, langkah berikutnya jelas.")
+slide = new_slide("14", "UJI 2026", "Diuji, bukan diasumsikan.")
+add_rect(slide, 0.6, 1.95, 5.9, 1.6, WHITE, INK, 3)
+add_text(slide, 0.8, 2.1, 5.5, 0.3, "TIGA KELAS", 11, MUTED, True, MONO)
+add_text(slide, 0.8, 2.45, 5.5, 0.8, "14/24  (58,3%)", 30, INK, True, DISPLAY)
+add_rect(slide, 6.7, 1.95, 6.0, 1.6, LIME, INK, 3)
+add_text(slide, 6.9, 2.1, 5.6, 0.3, "BINER (DIPAKAI DEMO)", 11, INK, True, MONO)
+add_text(slide, 6.9, 2.45, 5.6, 0.8, "20/24  (83,3%)", 30, INK, True, DISPLAY)
+add_text(slide, 0.6, 3.85, 12.2, 0.35, "MENGAPA TIGA KELAS GAGAL", 11, MUTED, True, MONO)
+add_text(
+    slide,
+    0.6,
+    4.2,
+    12.2,
+    2.4,
+    "7 dari 8 hinaan langsung diprediksi Hate Speech.\n"
+    "Classifier khusus Abusive vs Hate pun hanya mengenali 2 dari 8.\n\n"
+    "Akar masalah: 64,7% teks berhinaan di dataset memang dilabeli Hate Speech;\n"
+    "58% teks berhinaan tanpa menyebut kelompok juga dilabeli Hate Speech.\n\n"
+    "Bukan modelnya yang kurang, melainkan batas kelasnya yang tidak konsisten.",
+    13,
+    INK,
+    False,
+    BODY,
+    line_spacing=1.3,
+)
+footer(slide, "14")
+
+# ---------------------------------------------------------------- slide 15
+slide = new_slide("15", "KESIMPULAN", "Baseline kuat, langkah berikutnya jelas.")
 add_rect(slide, 0.6, 1.95, 3.9, 1.7, LIME, INK, 3)
-add_text(slide, 0.8, 2.1, 3.5, 0.5, "0,8075", 30, INK, True, DISPLAY)
-add_text(slide, 0.8, 2.7, 3.5, 0.5, "macro-F1 SVM", 11, INK, True, MONO)
+add_text(slide, 0.8, 2.1, 3.5, 0.5, "0,8893", 30, INK, True, DISPLAY)
+add_text(slide, 0.8, 2.7, 3.5, 0.5, "macro-F1 biner", 11, INK, True, MONO)
 add_rect(slide, 4.7, 1.95, 3.9, 1.7, ORANGE, INK, 3)
-add_text(slide, 4.9, 2.1, 3.5, 0.5, "83,71%", 30, INK, True, DISPLAY)
+add_text(slide, 4.9, 2.1, 3.5, 0.5, "89,01%", 30, INK, True, DISPLAY)
 add_text(slide, 4.9, 2.7, 3.5, 0.5, "akurasi test", 11, INK, True, MONO)
 add_rect(slide, 8.8, 1.95, 3.9, 1.7, PINK, INK, 3)
-add_text(slide, 9.0, 2.1, 3.5, 0.5, "1.283", 30, INK, True, DISPLAY)
-add_text(slide, 9.0, 2.7, 3.5, 0.5, "teks uji", 11, INK, True, MONO)
+add_text(slide, 9.0, 2.1, 3.5, 0.5, "83,3%", 30, INK, True, DISPLAY)
+add_text(slide, 9.0, 2.7, 3.5, 0.5, "akurasi uji 2026", 11, INK, True, MONO)
 add_text(slide, 0.6, 4.0, 12.2, 0.35, "NEXT", 11, MUTED, True, MONO)
-add_text(slide, 0.6, 4.35, 12.2, 2.3, "1. Fine-tune IndoBERT sebagai pembanding.\n2. Uji temporal 2026 dengan 100–200 sampel baru.\n3. Kalibrasi probabilitas dan analisis bias.\n4. Tambahkan fitur konteks/negasi sebelum produksi.", 15, INK, False, BODY, line_spacing=1.35)
-footer(slide, "14")
+add_text(slide, 0.6, 4.35, 12.2, 2.3, "1. Perbaiki aturan anotasi dan ukur agreement antar-anotator.\n2. Perluas uji 2026 menjadi 100–200 kalimat dengan dua anotator.\n3. Kalibrasi probabilitas dan analisis bias kelompok.\n4. Tambahkan tahap kedua Abusive vs Hate bila anotasi sudah konsisten.", 15, INK, False, BODY, line_spacing=1.35)
+footer(slide, "15")
 
 OUT.parent.mkdir(parents=True, exist_ok=True)
 prs.save(OUT)

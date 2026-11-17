@@ -712,13 +712,13 @@
   <div class="ticker" aria-hidden="true">
     <div class="ticker-track">
       <span>13.169 tweet bahasa Indonesia</span>
-      <span>3 kelas: normal / abusive / hate speech</span>
+      <span>2 kelas: normal / kebencian-abusif</span>
       <span>TF-IDF word 1–2 gram + char 3–5 gram</span>
       <span>Naive Bayes / Regresi Logistik / Linear SVM</span>
       <span>macro-F1 di data uji</span>
       <span>demo akademik — bukan alat moderasi produksi</span>
       <span>13.169 tweet bahasa Indonesia</span>
-      <span>3 kelas: normal / abusive / hate speech</span>
+      <span>2 kelas: normal / kebencian-abusif</span>
       <span>TF-IDF word 1–2 gram + char 3–5 gram</span>
       <span>Naive Bayes / Regresi Logistik / Linear SVM</span>
       <span>macro-F1 di data uji</span>
@@ -744,9 +744,11 @@
         <div class="kicker">[01] Deteksi ujaran kebencian · bahasa Indonesia</div>
         <h1>Kenali<br /><span class="marker">teks</span> sebelum<br />menyebar<span class="bang">.</span></h1>
         <p class="hero-copy">
-          Model tiga kelas — <strong>Normal</strong>, <strong>Abusive</strong>, <strong>Hate Speech</strong> —
+          Model biner — <strong>Normal</strong> dan <strong>Kebencian/Abusif</strong> —
           dilatih pada 13.169 tweet berbahasa Indonesia. Pipeline: praproses bahasa → TF-IDF →
           tiga model klasik → evaluasi macro-F1 → demo web.
+          Analisis tiga kelas (Normal, Abusive, Hate Speech) tetap tersedia di laporan;
+          skema biner dipilih setelah uji generalisasi pada kalimat bergaya 2026.
         </p>
       </div>
       <aside class="hero-side" aria-label="Ringkasan model">
@@ -781,10 +783,9 @@
           </div>
 
           <div class="samples">
-            <div class="samples-label">Muat contoh · mengandung bahasa kasar</div>
+            <div class="samples-label">Muat contoh · kalimat bergaya 2026</div>
             <button class="sample" type="button" data-sample="normal">Normal</button>
-            <button class="sample" type="button" data-sample="abusive">Abusive</button>
-            <button class="sample" type="button" data-sample="hate">Hate speech</button>
+            <button class="sample" type="button" data-sample="toxic">Toxic</button>
           </div>
 
           <div id="error-box" class="error" role="alert" hidden></div>
@@ -847,13 +848,12 @@
 
   <script>
     const SAMPLES = {
-      normal: "Saya suka sekali makanan di warung ini, harganya murah dan rasanya enak.",
-      abusive: "Anjir, gua lupa bawa dompet.",
-      hate: "Dasar cebong munafik, kalian semua harus pergi."
+      normal: "Program makan bergizi gratis sudah jalan di sekolah anak saya, lumayan membantu.",
+      toxic: "Dasar cebong munafik, kalian semua harus pergi dari negeri ini."
     };
 
-    const LABEL_ORDER = ["Normal", "Abusive", "Hate Speech"];
-    const LABEL_CLASS = { "Normal": "normal", "Abusive": "abusive", "Hate Speech": "hate" };
+    const LABEL_ORDER = ["Normal", "Kebencian/Abusif"];
+    const LABEL_CLASS = { "Normal": "normal", "Kebencian/Abusif": "hate" };
 
     const input = document.getElementById("text-input");
     const charCount = document.getElementById("char-count");
@@ -1002,10 +1002,10 @@
     updateCount();
     loadModelInfo();
 
-    // Mode screenshot: /?demo=hate|abusive|normal otomatis menganalisis.
+    // Mode screenshot: /?demo=toxic|normal otomatis menganalisis.
     const demoKey = new URLSearchParams(window.location.search).get("demo");
     if (demoKey) {
-      const key = SAMPLES[demoKey] ? demoKey : "hate";
+      const key = SAMPLES[demoKey] ? demoKey : "toxic";
       setText(key);
       setTimeout(analyze, 450);
     }

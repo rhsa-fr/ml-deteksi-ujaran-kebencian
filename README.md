@@ -45,8 +45,9 @@ tugas-besar-nlp/
 python -m pip install -r requirements-dev.txt
 
 python src/download_data.py      # unduh dataset dari GitHub
-python src/preprocess.py         # bersihkan + normalisasi + dedup
-python src/train.py              # latih, tuning, evaluasi, simpan artefak
+python src/preprocess.py         # bersihkan + normalisasi + netralisasi entitas
+python src/train.py              # model tiga kelas (studi pembanding)
+python src/train_binary.py       # model final biner untuk demo
 python src/threshold_analysis.py # opsional: analisis ambang indikasi hate
 
 uvicorn app.main:app --reload --port 8000
@@ -90,23 +91,40 @@ Catatan deploy:
 
 ## Hasil
 
-Angka final diisi otomatis oleh `src/train.py` ke `results/metrics.json`.
-Ringkasan yang dipakai di laporan:
+Angka diisi otomatis oleh `src/train.py` (tiga kelas) dan `src/train_binary.py`
+(model final biner) ke `results/`.
+
+**Skema biner — model final yang dipakai demo** (`src/train_binary.py`):
 
 | Model | Val macro-F1 | Test accuracy | Test macro-F1 |
 |---|---:|---:|---:|
-| Multinomial NB (α = 0,1) | 0,7698 | 79,89% | 0,7601 |
-| Regresi Logistik (C = 1,0) | 0,8023 | 82,00% | 0,7859 |
-| **Linear SVM (C = 0,1)** | **0,8056** | **83,71%** | **0,8075** |
+| Multinomial NB (α = 0,5) | 0,8379 | 86,05% | 0,8573 |
+| Regresi Logistik (C = 5,0) | 0,8610 | 88,70% | 0,8860 |
+| **Linear SVM (C = 0,1)** | **0,8635** | **89,01%** | **0,8893** |
+
+Per kelas untuk SVM: Normal F1 0,8798; Kebencian/Abusif 0,8988. Pada 24 kalimat
+probe bergaya 2026, akurasi 83,3% (20/24).
+
+**Skema tiga kelas — studi pembanding** (`src/train.py`):
+
+| Model | Val macro-F1 | Test accuracy | Test macro-F1 |
+|---|---:|---:|---:|
+| Multinomial NB (α = 0,5) | 0,7268 | 81,76% | 0,7710 |
+| Regresi Logistik (C = 5,0) | 0,7444 | 84,96% | 0,8189 |
+| **Linear SVM (C = 0,1)** | **0,7490** | 84,57% | 0,8181 |
+
+Per kelas untuk SVM tiga kelas: Normal F1 0,8800; Abusive 0,7294;
+Hate Speech 0,8449. Pada probe 2026 yang sama, akurasi hanya 58,3%.
 
 Model final dipilih dari macro-F1 validation, lalu dievaluasi sekali pada test
-(1.283 teks). Per kelas untuk SVM: Normal F1 0,8729; Abusive 0,7122;
-Hate Speech 0,8376. Confusion matrix dan analisis kesalahan ada di `results/`.
+(1.283 teks).
 
 Artefak:
 
-- `results/model_comparison.csv` — tabel perbandingan model.
-- `results/confusion_matrix.png` — confusion matrix model terpilih.
+- `results/model_comparison.csv` — tabel perbandingan model tiga kelas.
+- `results/confusion_matrix.png` — confusion matrix model biner (final).
+- `results/confusion_matrix_3class.png` — confusion matrix model tiga kelas.
+- `results/probe_2026.csv` — hasil uji 24 kalimat bergaya 2026.
 - `results/error_analysis.csv` — contoh salah prediksi (untuk analisis kualitatif).
 - `results/top_features.csv` — kata paling berpengaruh per kelas.
 - `results/test_predictions.csv` — seluruh prediksi di test.
@@ -119,24 +137,30 @@ Artefak:
 
 ## Keputusan metodologis
 
-1. **Tiga kelas, bukan 12 label.** Label asli multilabel; `HS=1` dipetakan ke
-   Hate Speech, `Abusive=1` tanpa `HS` ke Abusive, sisanya Normal. Pemetaan ini
-   menjaga kelas tetap seimbang dan mudah dievaluasi.
+1. **Dua skema label.** Model tiga kelas (Normal, Abusive, Hate Speech) dilaporkan
+   sebagai studi pembanding. Model yang dipakai demo adalah biner
+   **Normal vs Kebencian/Abusif**, karena uji generalisasi 2026 menunjukkan batas
+   Abusive–Hate Speech tidak dapat dipelajari: 64,7% teks berhinaan di dataset
+   memang dilabeli Hate Speech.
 2. **Tanpa stemming pada pipeline utama.** Stemming Sastrawi sangat lambat untuk
    13 ribu tweet; char n-gram 3–5 sudah menangani variasi morfologi dan typo.
    Opsi stemming tetap tersedia di `preprocess.py`.
 3. **Kamus slang diperbarui.** `data/raw/slang_2026.csv` menambahkan istilah
    seperti *rizz*, *flexing*, *mager*, *ansos*. Kata abusif sengaja tidak
    dinormalisasi karena merupakan sinyal kelas.
-4. **Tuning di validation, test sekali.** Model final dipilih dari macro-F1
+4. **Netralisasi nama tokoh politik.** 42 nama dibuang dari teks (training dan
+   inference). Tanpa ini, "Jokowi" saja memicu Hate Speech 87,6% karena model
+   menghafal polarisasi 2019, bukan mendeteksi ujaran.
+5. **Tuning di validation, test sekali.** Model final dipilih dari macro-F1
    validation, bukan dari test, agar evaluasi tidak bias.
-5. **Class weight balanced** pada Regresi Logistik dan Linear SVM untuk
-   mengatasi kelas Abusive yang lebih sedikit.
+6. **Class weight balanced** pada Regresi Logistik dan Linear SVM untuk
+   mengatasi kelas minoritas.
 
 ## Batasan
 
-- Dataset berasal dari Twitter 2018–2019. Bahasa, platform, dan target ujaran
-  berubah; model tidak otomatis valid untuk data 2026.
+- Dataset berasal dari Twitter 2018–2019. Ini sudah diukur: pada 24 kalimat
+  bergaya 2026, akurasi skema tiga kelas turun ke 58,3%. Skema biner mencapai
+  83,3% pada uji yang sama.
 - Anotasi hate speech subjektif dan konteks tweet terpotong dapat mengubah label.
 - Model linier mudah diinterpretasi tetapi tidak menangkap konteks panjang.
 - Demo ini bukan alat moderasi produksi; keputusan akhir harus melibatkan manusia.
