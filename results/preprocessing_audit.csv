@@ -1,0 +1,9 @@
+aspek,sebelum,sesudah
+Jumlah baris,13169,12822
+Baris duplikat (setelah normalisasi),341,0
+Missing pada teks,0,0
+Missing pada label,0,0
+Median jumlah kata,15.0,15.0
+Rata-rata jumlah kata,17.28,17.9
+Kosakata unik,45947,19147
+Kelas target,12 label biner,3 kelas

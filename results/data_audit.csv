@@ -1,0 +1,14 @@
+kolom,tipe,non_null,missing,persen_missing,unik,contoh_nilai
+Tweet,str,13169,0,0.0,13023,- disaat semua cowok berusaha melacak pe
+HS,int64,13169,0,0.0,2,1
+Abusive,int64,13169,0,0.0,2,1
+HS_Individual,int64,13169,0,0.0,2,1
+HS_Group,int64,13169,0,0.0,2,0
+HS_Religion,int64,13169,0,0.0,2,0
+HS_Race,int64,13169,0,0.0,2,0
+HS_Physical,int64,13169,0,0.0,2,0
+HS_Gender,int64,13169,0,0.0,2,0
+HS_Other,int64,13169,0,0.0,2,1
+HS_Weak,int64,13169,0,0.0,2,1
+HS_Moderate,int64,13169,0,0.0,2,0
+HS_Strong,int64,13169,0,0.0,2,0
